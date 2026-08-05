@@ -1,0 +1,11 @@
+alter table profiles enable row level security;
+alter table subscriptions enable row level security;
+alter table lessons enable row level security;
+alter table lesson_images enable row level security;
+alter table learning_progress enable row level security;
+alter table dedications enable row level security;
+alter table settings enable row level security;
+alter table notification_settings enable row level security;
+alter table daily_lesson_stats enable row level security;
+alter table daily_revenue_stats enable row level security;
+alter table payments enable row level security;
