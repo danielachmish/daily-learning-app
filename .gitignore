@@ -23,3 +23,6 @@ Thumbs.db
 # Claude Code local session state
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
+
+# Database backups (contain real user data — never commit, copy off-machine instead)
+backups/
