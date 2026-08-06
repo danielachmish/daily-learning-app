@@ -1,6 +1,11 @@
 [build]
   base = "apps/admin"
-  command = "npm install --prefix ../.. && npm run build --prefix ."
+  # Scoped to the admin workspace + its dependency (@daily-learning/shared)
+  # only — installing the whole monorepo here also pulls in the mobile
+  # app's much heavier Expo/React Native dependency tree for no reason,
+  # which is the leading suspect for exit code 243 (resource exhaustion)
+  # on Netlify's free-tier build containers.
+  command = "cd ../.. && npm install --workspace=apps/admin --include-workspace-root && cd apps/admin && npm run build"
   publish = "apps/admin/.next"
 
 [[plugins]]
