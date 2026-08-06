@@ -1,0 +1,7 @@
+[build]
+  base = "apps/admin"
+  command = "npm install --prefix ../.. && npm run build --prefix ."
+  publish = "apps/admin/.next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

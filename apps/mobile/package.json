@@ -38,7 +38,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "export:web": "expo export --platform web && node scripts/inject-pwa-head.js"
+    "export:web": "expo export --platform web && node scripts/inject-pwa-head.js",
+    "deploy:web": "bash scripts/deploy-web.sh"
   },
   "private": true
 }

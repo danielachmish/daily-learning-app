@@ -1,6 +1,8 @@
 node_modules/
 .env
 .env.local
+.env.production
+.env.production.local
 *.local
 
 # Expo
@@ -26,3 +28,11 @@ Thumbs.db
 
 # Database backups (contain real user data — never commit, copy off-machine instead)
 backups/
+
+# Local Netlify folder
+.netlify
+
+# Local deploy tooling artifacts (link files, build output copies)
+apps/mobile/.vercel-web-project/
+apps/mobile/dist-build-*/
+.vercel/

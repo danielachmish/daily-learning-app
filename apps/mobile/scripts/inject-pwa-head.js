@@ -10,7 +10,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const distDir = path.join(__dirname, '..', 'dist');
+const distDir = path.join(__dirname, '..', process.argv[2] || 'dist');
 const indexPath = path.join(distDir, 'index.html');
 
 if (!fs.existsSync(indexPath)) {
@@ -42,4 +42,4 @@ if (html.includes('<link rel="icon" href="/favicon.ico"/>')) {
 }
 
 fs.writeFileSync(indexPath, html);
-console.log('inject-pwa-head: PWA metadata injected into dist/index.html');
+console.log(`inject-pwa-head: PWA metadata injected into ${indexPath}`);

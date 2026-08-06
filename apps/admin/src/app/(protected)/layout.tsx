@@ -11,7 +11,7 @@ const NAV_LINKS = [
   { href: '/subscriptions', label: 'מנויים' },
   { href: '/lessons', label: 'לימודים' },
   { href: '/dedications', label: 'הקדשות' },
-  { href: '/settings', label: 'מחירי הקדשות' },
+  { href: '/settings', label: 'הגדרות' },
   { href: '/reports', label: 'דוחות' },
 ];
 
