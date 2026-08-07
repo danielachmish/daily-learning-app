@@ -6,7 +6,7 @@
   # which is the leading suspect for exit code 243 (resource exhaustion)
   # on Netlify's free-tier build containers.
   command = "cd ../.. && npm install --workspace=apps/admin --include-workspace-root && cd apps/admin && npm run build"
-  publish = "apps/admin/.next"
+  publish = ".next"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
