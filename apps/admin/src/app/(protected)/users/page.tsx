@@ -38,7 +38,15 @@ export default function UsersListPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-extrabold text-ink-900">משתמשים</h1>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-extrabold text-ink-900">משתמשים</h1>
+        <Link
+          href="/users/new"
+          className="rounded-full bg-teal-400 px-4 py-2 text-sm font-bold text-on-teal"
+        >
+          + הוספת משתמש
+        </Link>
+      </div>
 
       <input
         type="text"

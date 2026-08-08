@@ -36,3 +36,6 @@ backups/
 apps/mobile/.vercel-web-project/
 apps/mobile/dist-build-*/
 .vercel/
+
+.vercel
+.env*
