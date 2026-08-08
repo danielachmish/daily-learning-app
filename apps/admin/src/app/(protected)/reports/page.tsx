@@ -79,6 +79,7 @@ export default function ReportsPage() {
       ) : rows.length === 0 ? (
         <p className="text-sm text-slate-500">אין נתוני הכנסות בטווח הזה.</p>
       ) : (
+        <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-line text-start text-slate-500">
@@ -99,6 +100,7 @@ export default function ReportsPage() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
 
       {totalCount > 0 && (

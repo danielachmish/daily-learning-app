@@ -38,7 +38,7 @@ export default function UsersListPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-extrabold text-ink-900">משתמשים</h1>
         <Link
           href="/users/new"
@@ -66,6 +66,7 @@ export default function UsersListPage() {
       ) : users.length === 0 ? (
         <p className="text-sm text-slate-500">לא נמצאו משתמשים.</p>
       ) : (
+        <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-line text-start text-slate-500">
@@ -108,6 +109,7 @@ export default function UsersListPage() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
 
       {totalCount > 0 && (

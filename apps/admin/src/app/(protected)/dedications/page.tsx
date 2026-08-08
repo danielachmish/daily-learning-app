@@ -132,6 +132,7 @@ export default function DedicationsListPage() {
       ) : dedications.length === 0 ? (
         <p className="text-sm text-slate-500">לא נמצאו הקדשות.</p>
       ) : (
+        <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-line text-start text-slate-500">
@@ -190,6 +191,7 @@ export default function DedicationsListPage() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
 
       {totalCount > 0 && (
