@@ -45,6 +45,7 @@ export function NotificationSettingsScreen({ profile }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -66,37 +67,46 @@ export function NotificationSettingsScreen({ profile }: Props) {
   async function handleSave() {
     setSaving(true);
     setError(null);
+    setNotice(null);
     setSaved(false);
 
-    const reminderTimeString = formatTimeString(reminderTime);
-    const { error: saveError } = await saveNotificationSettings(profile.id, {
-      enabled,
-      reminderTime: enabled ? reminderTimeString : null,
-    });
+    // Wrapped defensively: this touches a native module (expo-notifications)
+    // whose behavior varies by platform, so an unexpected throw here must
+    // never leave the button spinning forever with no feedback.
+    try {
+      const reminderTimeString = formatTimeString(reminderTime);
+      const { error: saveError } = await saveNotificationSettings(profile.id, {
+        enabled,
+        reminderTime: enabled ? reminderTimeString : null,
+      });
 
-    if (saveError) {
-      setSaving(false);
-      setError(saveError);
-      return;
-    }
-
-    if (enabled) {
-      const { error: scheduleError } = await scheduleReminderNotification(
-        reminderTime.getHours(),
-        reminderTime.getMinutes(),
-        profile.language
-      );
-      if (scheduleError) {
-        setSaving(false);
-        setError(scheduleError);
+      if (saveError) {
+        setError(saveError);
         return;
       }
-    } else {
-      await cancelReminderNotification();
-    }
 
-    setSaving(false);
-    setSaved(true);
+      // The preference itself is saved at this point regardless of whether
+      // the platform can actually schedule a local notification — surface
+      // that as an informational notice rather than an error.
+      if (enabled) {
+        const { error: scheduleError } = await scheduleReminderNotification(
+          reminderTime.getHours(),
+          reminderTime.getMinutes(),
+          profile.language
+        );
+        if (scheduleError) {
+          setNotice(scheduleError);
+        }
+      } else {
+        await cancelReminderNotification();
+      }
+
+      setSaved(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'אירעה שגיאה בשמירת ההגדרות.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (loading) {
@@ -149,6 +159,7 @@ export function NotificationSettingsScreen({ profile }: Props) {
 
       {error && <Text style={styles.errorText}>{error}</Text>}
       {saved && <Text style={styles.savedText}>ההגדרות נשמרו.</Text>}
+      {notice && <Text style={styles.noticeText}>{notice}</Text>}
 
       <Pressable style={[styles.saveButton, saving && styles.saveButtonDisabled]} onPress={handleSave} disabled={saving}>
         {saving ? <ActivityIndicator color={colors.onTeal} /> : <Text style={styles.saveButtonText}>שמור</Text>}
@@ -211,6 +222,10 @@ const styles = StyleSheet.create({
   savedText: {
     color: colors.success,
     fontSize: 14,
+  },
+  noticeText: {
+    color: colors.ink700,
+    fontSize: 13,
   },
   saveButton: {
     backgroundColor: colors.teal400,

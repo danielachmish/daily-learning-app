@@ -19,6 +19,18 @@ const ANDROID_CHANNEL_ID = 'daily-reminder';
 const isExpoGoAndroid =
   Platform.OS === 'android' && Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
+/**
+ * expo-notifications ships no web implementation of its scheduling APIs
+ * (only badge/push-token/server-registration have `.web.ts` overrides) —
+ * `scheduleNotificationAsync`/`cancelScheduledNotificationAsync` fall back to
+ * an empty stub and throw `UnavailabilityError` when called on web. Local
+ * repeating reminders therefore aren't supported in the browser/PWA build at
+ * all (there's no persistent OS-level scheduler to hook into), so this is
+ * guarded the same way as the Expo Go Android case rather than letting the
+ * throw go uncaught.
+ */
+const isWeb = Platform.OS === 'web';
+
 let Notifications: typeof NotificationsModule | null = null;
 if (!isExpoGoAndroid) {
   Notifications = require('expo-notifications') as typeof NotificationsModule;
@@ -62,6 +74,10 @@ export async function scheduleReminderNotification(
 ): Promise<{ error: string | null }> {
   if (!Notifications) {
     return { error: 'התראות אינן נתמכות באפליקציית Expo Go באנדרואיד — יעבדו בגרסה המותקנת הרגילה.' };
+  }
+
+  if (isWeb) {
+    return { error: 'תזכורות אינן נתמכות עדיין בגרסת הדפדפן — ההגדרה נשמרה ותופעל כשתתקינו את האפליקציה.' };
   }
 
   const granted = await requestNotificationPermission();
