@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { cancelReminderNotification, scheduleReminderNotification } from '../services/localNotifications';
 import { fetchNotificationSettings, saveNotificationSettings } from '../services/notifications';
+import { subscribeToWebPush, unsubscribeFromWebPush } from '../services/webPush';
 import { colors } from '../theme/colors';
 import { isRTL } from '../utils/rtl';
 
@@ -86,17 +87,25 @@ export function NotificationSettingsScreen({ profile }: Props) {
       }
 
       // The preference itself is saved at this point regardless of whether
-      // the platform can actually schedule a local notification — surface
-      // that as an informational notice rather than an error.
+      // the platform can actually schedule a notification — surface that as
+      // an informational notice rather than an error. Web has no local
+      // scheduling API at all (see localNotifications.ts), so it goes
+      // through a real Web Push subscription instead; native platforms keep
+      // using expo-notifications' local scheduler as before.
       if (enabled) {
-        const { error: scheduleError } = await scheduleReminderNotification(
-          reminderTime.getHours(),
-          reminderTime.getMinutes(),
-          profile.language
-        );
-        if (scheduleError) {
-          setNotice(scheduleError);
+        if (Platform.OS === 'web') {
+          const { error: pushError } = await subscribeToWebPush(profile.id);
+          if (pushError) setNotice(pushError);
+        } else {
+          const { error: scheduleError } = await scheduleReminderNotification(
+            reminderTime.getHours(),
+            reminderTime.getMinutes(),
+            profile.language
+          );
+          if (scheduleError) setNotice(scheduleError);
         }
+      } else if (Platform.OS === 'web') {
+        await unsubscribeFromWebPush();
       } else {
         await cancelReminderNotification();
       }

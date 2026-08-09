@@ -391,6 +391,12 @@ deno_version = 2
 # the function itself (see supabase/functions/payment-webhook/index.ts).
 verify_jwt = false
 
+[functions.send-reminder-pushes]
+# Called by a pg_cron job via net.http_post, which can't supply a Supabase
+# JWT either — authenticated instead via its own CRON_SECRET check inside
+# the function (see supabase/functions/send-reminder-pushes/index.ts).
+verify_jwt = false
+
 [edge_runtime.secrets]
 STRIPE_SECRET_KEY = "env(STRIPE_SECRET_KEY)"
 STRIPE_WEBHOOK_SECRET = "env(STRIPE_WEBHOOK_SECRET)"
