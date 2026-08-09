@@ -176,9 +176,15 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
         <Pressable style={styles.utilityLink} onPress={handleShare}>
           <Text style={styles.utilityLinkText}>שיתוף</Text>
         </Pressable>
-        <Pressable style={styles.utilityLink} onPress={() => router.push('/notification-settings')}>
-          <Text style={styles.utilityLinkText}>תזכורות</Text>
-        </Pressable>
+        {/* "תזכורות" link removed for now — Web Push delivery on web/PWA
+            turned out unreliable on some Android OEMs (e.g. Samsung's
+            aggressive battery restrictions can block delivery when Chrome
+            is fully closed). The feature (route, screen, webPush service,
+            send-reminder-pushes function) is left in place, just
+            unreachable from the UI, in case it's revisited later —
+            especially once there's a real native app, where
+            expo-notifications' local scheduler works natively without
+            this class of issue at all. */}
       </View>
 
       <StreakBadge days={profile.current_streak} />
