@@ -1,9 +1,9 @@
 import type { UserProfile } from '@daily-learning/shared';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { TimeInput } from '../components/TimeInput';
 import { cancelReminderNotification, scheduleReminderNotification } from '../services/localNotifications';
 import { fetchNotificationSettings, saveNotificationSettings } from '../services/notifications';
 import { subscribeToWebPush, unsubscribeFromWebPush } from '../services/webPush';
@@ -31,18 +31,11 @@ function formatTimeString(date: Date): string {
   return `${hours}:${minutes}:00`;
 }
 
-function formatTimeDisplay(date: Date): string {
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${hours}:${minutes}`;
-}
-
 export function NotificationSettingsScreen({ profile }: Props) {
   const rtl = isRTL(profile.language);
 
   const [enabled, setEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState<Date>(() => parseTimeString(null));
-  const [showPicker, setShowPicker] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -144,25 +137,13 @@ export function NotificationSettingsScreen({ profile }: Props) {
       {enabled && (
         <View style={styles.timeSection}>
           <Text style={[styles.label, rtl && styles.textRTL]}>שעת תזכורת</Text>
-          <Pressable style={styles.timeButton} onPress={() => setShowPicker(true)}>
-            <Text style={styles.timeButtonText}>{formatTimeDisplay(reminderTime)}</Text>
-          </Pressable>
-
-          {showPicker && (
-            <DateTimePicker
-              value={reminderTime}
-              mode="time"
-              is24Hour
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={(_event, selectedDate) => {
-                setShowPicker(Platform.OS === 'ios');
-                if (selectedDate) {
-                  setReminderTime(selectedDate);
-                  setSaved(false);
-                }
-              }}
-            />
-          )}
+          <TimeInput
+            value={reminderTime}
+            onChange={(date) => {
+              setReminderTime(date);
+              setSaved(false);
+            }}
+          />
         </View>
       )}
 
@@ -210,19 +191,6 @@ const styles = StyleSheet.create({
   },
   timeSection: {
     gap: 8,
-  },
-  timeButton: {
-    alignSelf: 'flex-start',
-    borderWidth: 1.5,
-    borderColor: colors.teal400,
-    borderRadius: 999,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-  },
-  timeButtonText: {
-    fontSize: 18,
-    color: colors.teal600,
-    fontWeight: '600',
   },
   errorText: {
     color: colors.danger,
