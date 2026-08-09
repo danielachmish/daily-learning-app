@@ -10,7 +10,11 @@
 const fs = require('fs');
 const path = require('path');
 
-const distDir = path.join(__dirname, '..', process.argv[2] || 'dist');
+// path.resolve (not path.join!) — the second CLI arg is now sometimes an
+// absolute path (a system temp dir, when deploying), and path.join doesn't
+// reset on an absolute segment the way path.resolve does; it would just
+// concatenate "apps/mobile" + the absolute path into a bogus nested path.
+const distDir = path.resolve(__dirname, '..', process.argv[2] || 'dist');
 const indexPath = path.join(distDir, 'index.html');
 
 if (!fs.existsSync(indexPath)) {

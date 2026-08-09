@@ -1,16 +1,27 @@
 #!/usr/bin/env bash
 # Builds the production web export and deploys it to Vercel.
 #
-# Exports to a fresh, uniquely-named directory every run instead of
-# reusing dist/ — on Windows, "dist" can end up with a lingering file
-# handle (antivirus, an editor, a leftover process) that makes deleting
-# it fail with EBUSY. A new directory name sidesteps that entirely. The
-# Vercel project link is kept in .vercel-web-project/ (persisted outside
-# any build output) and copied into each fresh export before deploying.
+# Exports to a fresh directory OUTSIDE the git repo every run — for two
+# independent reasons:
+#   1. On Windows, "dist" can end up with a lingering file handle
+#      (antivirus, an editor, a leftover process) that makes deleting it
+#      fail with EBUSY. A fresh directory name sidesteps that.
+#   2. When the output dir lives inside the monorepo's git working tree
+#      (e.g. apps/mobile/dist-build-*), the Vercel CLI walks up to the
+#      parent .git and attaches its HEAD commit's author to the
+#      deployment. That author is a GitHub noreply address Vercel can't
+#      match to a team member, so it silently blocks the deploy (it sits
+#      at status "UNKNOWN"/"Building…" forever and Vercel emails "Failed
+#      CLI deployment ... they're not a member of the team"). Building
+#      completely outside any git tree means there's no git metadata to
+#      attach, so this check never triggers.
+# The Vercel project link is kept in .vercel-web-project/ (persisted
+# outside any build output) and copied into each fresh export before
+# deploying.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-OUT="dist-build-$(date +%s)"
+OUT="$(mktemp -d -t daily-learning-web-deploy-XXXXXX)"
 
 echo "Building production web export to $OUT..."
 # .env.production alone isn't reliably picked up ahead of .env (and Metro's
@@ -40,7 +51,5 @@ EOF
 echo "Deploying to Vercel..."
 npx vercel --prod --yes --cwd "$OUT"
 
-echo "Cleaning up old build directories..."
-for d in dist-build-*; do
-  [ "$d" = "$OUT" ] || rm -rf "$d" 2>/dev/null || true
-done
+echo "Cleaning up temporary build directory..."
+rm -rf "$OUT" 2>/dev/null || true
