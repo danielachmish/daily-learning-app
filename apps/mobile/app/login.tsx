@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Logo } from '../src/components/Logo';
+import { LogoLockup } from '../src/components/LogoLockup';
 import { useAuth } from '../src/hooks/useAuth';
 import { colors } from '../src/theme/colors';
 import { isDeviceRTL } from '../src/utils/rtl';
@@ -49,7 +49,9 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <Logo size={48} />
+      <View style={styles.logoBlock}>
+        <LogoLockup />
+      </View>
       <Text style={[styles.title, rtl && styles.textRTL]}>התחברות</Text>
 
       <TextInput
@@ -98,6 +100,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
     gap: 12,
+  },
+  logoBlock: {
+    alignItems: 'center',
+    marginBottom: 8,
   },
   title: {
     fontSize: 24,

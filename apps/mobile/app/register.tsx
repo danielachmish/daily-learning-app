@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Logo } from '../src/components/Logo';
+import { LogoLockup } from '../src/components/LogoLockup';
 import { useAuth } from '../src/hooks/useAuth';
 import { colors } from '../src/theme/colors';
 import { isRTL } from '../src/utils/rtl';
@@ -57,7 +57,9 @@ export default function RegisterScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <Logo size={44} />
+      <View style={styles.logoBlock}>
+        <LogoLockup size={44} />
+      </View>
       <Text style={[styles.title, rtl && styles.textRTL]}>הרשמה</Text>
 
       <TextInput
@@ -188,6 +190,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
     gap: 10,
+  },
+  logoBlock: {
+    alignItems: 'center',
+    marginBottom: 4,
   },
   title: {
     fontSize: 24,

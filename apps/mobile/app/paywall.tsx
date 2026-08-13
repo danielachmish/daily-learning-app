@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Logo } from '../src/components/Logo';
+import { LogoLockup } from '../src/components/LogoLockup';
 import { useAuth } from '../src/hooks/useAuth';
 import { startCheckout } from '../src/services/payments';
 import { supabase } from '../src/services/supabase';
@@ -65,7 +65,9 @@ export default function PaywallScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <Logo size={44} />
+      <View style={styles.logoBlock}>
+        <LogoLockup size={36} />
+      </View>
       <Text style={[styles.title, rtl && styles.textRTL]}>אין לך מנוי פעיל</Text>
       <Text style={[styles.subtitle, rtl && styles.textRTL]}>
         כדי לצפות בלימוד היומי, יש לרכוש מנוי.
@@ -124,6 +126,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
     gap: 12,
+  },
+  logoBlock: {
+    marginBottom: -4,
   },
   title: {
     fontSize: 20,

@@ -1,8 +1,10 @@
 import { Stack } from 'expo-router';
 import { useEffect, type ReactNode } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from '../src/hooks/useAuth';
+import { colors } from '../src/theme/colors';
 import { syncAppDirection } from '../src/utils/appDirection';
 import { isDeviceRTL, isRTL } from '../src/utils/rtl';
 
@@ -28,9 +30,37 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <AuthProvider>
         <DirectionSync>
-          <Stack screenOptions={{ headerShown: false }} />
+          {/* On web, every screen was built full-bleed with no width cap —
+              fine on a phone, but on a wide desktop browser the content
+              just hugs one side with a huge empty gap on the other. This
+              frame caps the app at phone width and centers it, same
+              pattern most mobile-first web apps use for desktop. Native
+              is untouched (maxWidth: undefined there, so it's a no-op). */}
+          <View style={styles.outer}>
+            <View style={styles.frame}>
+              <Stack screenOptions={{ headerShown: false }} />
+            </View>
+          </View>
         </DirectionSync>
       </AuthProvider>
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  outer: {
+    flex: 1,
+    backgroundColor: Platform.OS === 'web' ? colors.ink900 : colors.paper0,
+    alignItems: 'center',
+  },
+  frame: {
+    flex: 1,
+    width: '100%',
+    maxWidth: Platform.OS === 'web' ? 480 : undefined,
+    backgroundColor: colors.paper0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: Platform.OS === 'web' ? 0.25 : 0,
+    shadowRadius: 40,
+  },
+});
