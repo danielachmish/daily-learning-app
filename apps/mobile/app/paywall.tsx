@@ -66,7 +66,7 @@ export default function PaywallScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.logoBlock}>
-        <LogoLockup size={36} />
+        <LogoLockup width={160} />
       </View>
       <Text style={[styles.title, rtl && styles.textRTL]}>אין לך מנוי פעיל</Text>
       <Text style={[styles.subtitle, rtl && styles.textRTL]}>

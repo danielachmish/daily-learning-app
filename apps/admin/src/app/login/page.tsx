@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { Logo } from '../../components/Logo';
+import { LogoLockup } from '../../components/LogoLockup';
 import { createClient } from '../../services/supabase/client';
 
 export default function AdminLoginPage() {
@@ -42,8 +42,8 @@ export default function AdminLoginPage() {
         onSubmit={handleSubmit}
         className="w-full max-w-sm rounded-2xl border border-line bg-paper-50 p-8 shadow-sm"
       >
-        <div className="mb-6 flex items-center gap-3">
-          <Logo size={36} />
+        <div className="mb-6 flex flex-col items-center gap-3">
+          <LogoLockup width={160} />
           <h1 className="text-lg font-extrabold text-ink-900">כניסת מנהל</h1>
         </div>
 

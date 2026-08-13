@@ -1,53 +1,32 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet } from 'react-native';
 
-import { colors } from '../theme/colors';
-import { Logo } from './Logo';
+const ASPECT_RATIO = 2482 / 1376;
 
 interface Props {
-  size?: number;
+  width?: number;
 }
 
 /**
- * Full lockup version of the org's mark — icon + "פרויקט הלימוד היומי" +
- * the subtitle line, stacked. See Logo.tsx for the icon-only version used
- * in tight/inline spots. Matches the admin panel's LogoLockup.
+ * The org's real logo, used as-is (not recreated/split into pieces) per
+ * explicit request — a single image, exactly matching the source file.
+ * Source: assets/brand/logo-full.png (2482x1376, converted from the
+ * org-provided CMYK JPEG to sRGB so it renders with correct colors —
+ * CMYK JPEGs can render wrong/inverted otherwise). Matches the admin
+ * panel's LogoLockup.
  */
-export function LogoLockup({ size = 56 }: Props) {
+export function LogoLockup({ width = 260 }: Props) {
   return (
-    <View style={styles.container}>
-      <Logo size={size} />
-      <View style={styles.textBlock}>
-        <Text style={styles.project}>פרויקט</Text>
-        <Text style={styles.title}>הלימוד היומי</Text>
-      </View>
-      <Text style={styles.subtitle}>בראשות הגאון רבי יגאל כהן שליט״א</Text>
-    </View>
+    <Image
+      source={require('../../assets/brand/logo-full.png')}
+      style={[styles.image, { width, height: width / ASPECT_RATIO }]}
+      resizeMode="contain"
+      accessibilityLabel="פרויקט הלימוד היומי — בראשות הגאון רבי יגאל כהן שליט״א"
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    gap: 2,
-  },
-  textBlock: {
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  project: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.amber500,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: colors.ink900,
-  },
-  subtitle: {
-    marginTop: 2,
-    fontSize: 12,
-    color: colors.teal600,
-    textAlign: 'center',
+  image: {
+    alignSelf: 'center',
   },
 });

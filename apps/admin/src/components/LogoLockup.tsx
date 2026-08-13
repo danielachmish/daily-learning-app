@@ -1,20 +1,19 @@
-import { Logo } from './Logo';
-
 /**
- * Full lockup version of the org's mark — icon + "פרויקט הלימוד היומי" +
- * the subtitle line, stacked to fit a narrow sidebar column. See Logo.tsx
- * for the icon-only version used in tight/inline spots (mobile top bar,
- * login page heading).
+ * The org's real logo, used as-is (not recreated/split into pieces) per
+ * explicit request — a single image, exactly matching the source file.
+ * Source: apps/admin/public/brand/logo-full.png (2482x1376, converted from
+ * the org-provided CMYK JPEG to sRGB so it renders with correct colors on
+ * the web — CMYK JPEGs can render wrong/inverted in browsers otherwise).
  */
-export function LogoLockup() {
+export function LogoLockup({ width = 180 }: { width?: number }) {
   return (
-    <div className="flex flex-col items-center gap-1 px-1 text-center">
-      <Logo size={44} />
-      <div className="mt-1 leading-tight">
-        <div className="text-xs font-bold text-amber-500">פרויקט</div>
-        <div className="text-base font-extrabold text-ink-900">הלימוד היומי</div>
-      </div>
-      <div className="text-[11px] leading-tight text-teal-600">בראשות הגאון רבי יגאל כהן שליט״א</div>
-    </div>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/brand/logo-full.png"
+      alt="פרויקט הלימוד היומי — בראשות הגאון רבי יגאל כהן שליט״א"
+      width={width}
+      height={Math.round(width / 1.8038)}
+      style={{ width, height: 'auto' }}
+    />
   );
 }

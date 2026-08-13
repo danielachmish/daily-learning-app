@@ -27,12 +27,3 @@ export const colors = {
   danger: '#B00020',
   success: '#1A7A3E',
 };
-
-/** Gradient stops used by the Logo mark specifically — not general UI colors. */
-export const logoGradients = {
-  rayStart: '#0F6E86',
-  rayMid: '#1FA7B8',
-  rayEnd: '#57D6E0',
-  sunStart: '#FBB040',
-  sunEnd: '#EE6B22',
-};

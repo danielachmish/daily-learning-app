@@ -58,7 +58,7 @@ export default function RegisterScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.logoBlock}>
-        <LogoLockup size={44} />
+        <LogoLockup width={180} />
       </View>
       <Text style={[styles.title, rtl && styles.textRTL]}>הרשמה</Text>
 

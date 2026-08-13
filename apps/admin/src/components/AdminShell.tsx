@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import { Logo } from './Logo';
 import { LogoLockup } from './LogoLockup';
 import { SignOutButton } from './SignOutButton';
 
@@ -38,10 +37,7 @@ export function AdminShell({ fullName, children }: Props) {
       {/* Mobile-only top bar with a menu toggle. Hidden on desktop, where the
           sidebar below is always visible instead. */}
       <div className="flex items-center justify-between border-b border-line bg-paper-50 p-4 md:hidden">
-        <div className="flex items-center gap-2">
-          <Logo size={24} />
-          <span className="text-sm font-extrabold text-ink-900">לימוד יומי</span>
-        </div>
+        <LogoLockup width={130} />
         <button
           type="button"
           onClick={() => setMenuOpen((open) => !open)}
