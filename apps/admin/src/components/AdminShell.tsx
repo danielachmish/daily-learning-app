@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { Logo } from './Logo';
+import { LogoLockup } from './LogoLockup';
 import { SignOutButton } from './SignOutButton';
 
 const NAV_LINKS = [
@@ -57,11 +58,10 @@ export function AdminShell({ fullName, children }: Props) {
           menuOpen ? 'flex' : 'hidden'
         } w-full flex-col gap-1 border-b border-line bg-paper-50 p-4 md:flex md:w-56 md:border-b-0 md:border-e`}
       >
-        <div className="mb-5 hidden items-center gap-2 px-1 md:flex">
-          <Logo size={28} />
-          <span className="text-sm font-extrabold text-ink-900">לימוד יומי</span>
+        <div className="mb-5 hidden md:block">
+          <LogoLockup />
         </div>
-        <p className="mb-4 truncate text-sm font-medium text-slate-500">{fullName}</p>
+        <p className="mb-4 truncate text-sm font-medium text-slate-500 md:text-center">{fullName}</p>
         <nav className="flex flex-1 flex-col gap-1">
           {NAV_LINKS.map((link) => (
             <Link
