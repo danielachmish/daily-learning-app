@@ -1,27 +1,38 @@
 /**
- * Central palette for the app's visual identity: teal as the primary
- * anchor, ink for headlines/text, and amber reserved for streak and
- * dedication moments — not used as a general accent.
+ * Central palette for the app's visual identity — matched to the
+ * organization's real logo (sunburst mark + "פרויקט הלימוד היומי"
+ * wordmark, בראשות הגר"י כהן שליט"א): teal as the primary anchor (the
+ * sunburst rays), ink as a navy close to the wordmark, and amber as the
+ * sunrise-orange of the mark's rising sun.
  */
 export const colors = {
-  teal900: '#0E4F4B',
-  teal600: '#167F79',
-  teal400: '#2CB9AC',
-  teal100: '#E3F5F1',
-  onTeal: '#06231F',
+  teal900: '#0C5866',
+  teal600: '#128499',
+  teal400: '#3FC6D6',
+  teal100: '#E1F6F8',
+  onTeal: '#04262B',
 
-  ink900: '#17233A',
-  ink700: '#2B3A52',
+  ink900: '#26324A',
+  ink700: '#3B4864',
   slate500: '#59697C',
   slate300: '#9AA7B5',
 
-  amber500: '#C98A2E',
-  amber100: '#F6E7CE',
+  amber500: '#EF7A1E',
+  amber100: '#FBE4CE',
 
   paper0: '#FBFAF7',
   paper50: '#FFFFFF',
-  line: 'rgba(23, 35, 58, 0.10)',
+  line: 'rgba(38, 50, 74, 0.10)',
 
   danger: '#B00020',
   success: '#1A7A3E',
+};
+
+/** Gradient stops used by the Logo mark specifically — not general UI colors. */
+export const logoGradients = {
+  rayStart: '#0F6E86',
+  rayMid: '#1FA7B8',
+  rayEnd: '#57D6E0',
+  sunStart: '#FBB040',
+  sunEnd: '#EE6B22',
 };

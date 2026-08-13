@@ -2,25 +2,25 @@
 
 :root {
   --background: #FBFAF7;
-  --foreground: #17233A;
+  --foreground: #26324A;
 
-  --color-teal-900: #0E4F4B;
-  --color-teal-600: #167F79;
-  --color-teal-400: #2CB9AC;
-  --color-teal-100: #E3F5F1;
-  --color-on-teal: #06231F;
+  --color-teal-900: #0C5866;
+  --color-teal-600: #128499;
+  --color-teal-400: #3FC6D6;
+  --color-teal-100: #E1F6F8;
+  --color-on-teal: #04262B;
 
-  --color-ink-900: #17233A;
-  --color-ink-700: #2B3A52;
+  --color-ink-900: #26324A;
+  --color-ink-700: #3B4864;
   --color-slate-500: #59697C;
   --color-slate-300: #9AA7B5;
 
-  --color-amber-500: #C98A2E;
-  --color-amber-100: #F6E7CE;
+  --color-amber-500: #EF7A1E;
+  --color-amber-100: #FBE4CE;
 
   --color-paper-0: #FBFAF7;
   --color-paper-50: #FFFFFF;
-  --color-line: rgba(23, 35, 58, 0.10);
+  --color-line: rgba(38, 50, 74, 0.10);
 
   --color-danger: #B00020;
   --color-success: #1A7A3E;
@@ -61,8 +61,8 @@
     --color-slate-300: #6C7A8A;
     --color-paper-0: #0D141E;
     --color-paper-50: #141D29;
-    --color-teal-100: #113230;
-    --color-amber-100: #3A2C15;
+    --color-teal-100: #0E3B41;
+    --color-amber-100: #3D2712;
     --color-line: rgba(236, 238, 242, 0.10);
   }
 }
