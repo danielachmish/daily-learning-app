@@ -207,12 +207,12 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
         <>
           <ScrollView contentContainerStyle={styles.lessonContent}>
             {lesson.hebrew_date && (
-              <Text style={[styles.hebrewDate, rtl && styles.textRTL]}>{lesson.hebrew_date}</Text>
+              <Text style={[styles.hebrewDate, styles.textInset, rtl && styles.textRTL]}>{lesson.hebrew_date}</Text>
             )}
-            <Text style={[styles.title, rtl && styles.textRTL]}>{lesson.title}</Text>
+            <Text style={[styles.title, styles.textInset, rtl && styles.textRTL]}>{lesson.title}</Text>
 
             {images.map((image) => (
-              <RemoteImage key={image.id} uri={image.image_url} style={styles.lessonImage} resizeMode="contain" />
+              <RemoteImage key={image.id} uri={image.image_url} style={styles.lessonImage} />
             ))}
           </ScrollView>
 
@@ -318,8 +318,14 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   lessonContent: {
-    padding: 24,
+    paddingVertical: 24,
     gap: 16,
+  },
+  // Only the title/date get horizontal insets — the page images
+  // themselves bleed full-width, edge to edge, like reading an actual
+  // book page instead of a photo pinned inside a margin.
+  textInset: {
+    paddingHorizontal: 24,
   },
   hebrewDate: {
     fontSize: 13,
@@ -335,8 +341,6 @@ const styles = StyleSheet.create({
   },
   lessonImage: {
     width: '100%',
-    height: 300,
-    borderRadius: 12,
     backgroundColor: colors.teal100,
   },
   completeSection: {
