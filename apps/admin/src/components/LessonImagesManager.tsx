@@ -1,7 +1,7 @@
 'use client';
 
 import type { LessonImage } from '@daily-learning/shared';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { deleteLessonImage, fetchLessonImages, reorderLessonImages, uploadLessonImage } from '../services/lessons';
 import { renderPdfPagesToImages } from '../services/pdfToImages';
@@ -19,6 +19,7 @@ export function LessonImagesManager({ lessonId }: Props) {
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [zoomedUrl, setZoomedUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function reload() {
     setLoading(true);
@@ -114,14 +115,26 @@ export function LessonImagesManager({ lessonId }: Props) {
         אפשר להעלות תמונות בודדות, או קובץ PDF שלם — כל עמוד ב-PDF יהפוך אוטומטית לתמונה נפרדת, לפי הסדר.
       </p>
 
+      {/* The native <input type="file"> renders as plain, easy-to-miss
+          browser-default text — hidden here and triggered by a real,
+          clearly-visible button instead, matching the rest of the panel. */}
       <input
+        ref={fileInputRef}
         type="file"
         accept="image/*,application/pdf"
         multiple
         onChange={handleUpload}
         disabled={uploading}
-        className="mb-4 text-sm"
+        className="hidden"
       />
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        disabled={uploading}
+        className="mb-4 rounded-full bg-teal-400 px-4 py-2 text-sm font-bold text-on-teal disabled:opacity-60"
+      >
+        + העלאת תמונות או PDF
+      </button>
       {uploading && <p className="mb-2 text-sm text-slate-500">{uploadStatus ?? 'מעלה…'}</p>}
       {error && <p className="mb-2 text-sm text-danger">{error}</p>}
 
