@@ -187,8 +187,6 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
             this class of issue at all. */}
       </View>
 
-      <StreakBadge days={profile.current_streak} />
-
       {loading ? (
         <View style={styles.centerFill}>
           <ActivityIndicator size="large" />
@@ -204,19 +202,25 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
           </Text>
         </View>
       ) : (
-        <>
-          <ScrollView contentContainerStyle={styles.lessonContent}>
-            {lesson.hebrew_date && (
-              <Text style={[styles.hebrewDate, styles.textInset, rtl && styles.textRTL]}>{lesson.hebrew_date}</Text>
-            )}
-            <Text style={[styles.title, styles.textInset, rtl && styles.textRTL]}>{lesson.title}</Text>
+        // The complete button and streak badge used to sit in a fixed
+        // section below the ScrollView (always visible, "floating"), and
+        // the streak badge had its own row above the scroll area — both
+        // ate into the small screen's already-limited space before the
+        // actual lesson content even appeared. Now everything after the
+        // title lives inside the scroll content, so the initial view is
+        // dedicated to the lesson pages, and the button/streak show up
+        // naturally once you scroll to the end.
+        <ScrollView contentContainerStyle={styles.lessonContent}>
+          {lesson.hebrew_date && (
+            <Text style={[styles.hebrewDate, styles.textInset, rtl && styles.textRTL]}>{lesson.hebrew_date}</Text>
+          )}
+          <Text style={[styles.title, styles.textInset, rtl && styles.textRTL]}>{lesson.title}</Text>
 
-            {images.map((image) => (
-              <RemoteImage key={image.id} uri={image.image_url} style={styles.lessonImage} />
-            ))}
-          </ScrollView>
+          {images.map((image) => (
+            <RemoteImage key={image.id} uri={image.image_url} style={styles.lessonImage} />
+          ))}
 
-          <View style={styles.completeSection}>
+          <View style={[styles.completeSection, styles.textInset]}>
             {encouragement && (
               <Text style={[styles.encouragementText, rtl && styles.textRTL]}>{encouragement}</Text>
             )}
@@ -234,7 +238,9 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
               )}
             </Pressable>
           </View>
-        </>
+
+          <StreakBadge days={profile.current_streak} />
+        </ScrollView>
       )}
 
       <Pressable style={styles.dedicationsLink} onPress={() => router.push('/dedications/today')}>
@@ -344,7 +350,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.teal100,
   },
   completeSection: {
-    padding: 16,
+    paddingVertical: 16,
+    marginTop: 8,
     borderTopWidth: 1,
     borderTopColor: colors.line,
     gap: 10,
