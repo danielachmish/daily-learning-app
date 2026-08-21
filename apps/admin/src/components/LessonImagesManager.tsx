@@ -4,6 +4,7 @@ import type { LessonImage } from '@daily-learning/shared';
 import { useEffect, useState } from 'react';
 
 import { deleteLessonImage, fetchLessonImages, reorderLessonImages, uploadLessonImage } from '../services/lessons';
+import { renderPdfPagesToImages } from '../services/pdfToImages';
 import { createClient } from '../services/supabase/client';
 
 interface Props {
@@ -15,7 +16,9 @@ export function LessonImagesManager({ lessonId }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [zoomedUrl, setZoomedUrl] = useState<string | null>(null);
 
   async function reload() {
     setLoading(true);
@@ -40,14 +43,33 @@ export function LessonImagesManager({ lessonId }: Props) {
     const supabase = createClient();
 
     for (const file of Array.from(files)) {
-      const result = await uploadLessonImage(supabase, lessonId, file);
-      if (result.error) {
-        setError(result.error);
-        break;
+      let pagesToUpload: File[];
+      if (file.type === 'application/pdf') {
+        setUploadStatus(`מעבד את ${file.name}…`);
+        try {
+          pagesToUpload = await renderPdfPagesToImages(file);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'עיבוד ה-PDF נכשל.');
+          break;
+        }
+      } else {
+        pagesToUpload = [file];
+      }
+
+      for (let i = 0; i < pagesToUpload.length; i++) {
+        setUploadStatus(
+          pagesToUpload.length > 1 ? `מעלה עמוד ${i + 1} מתוך ${pagesToUpload.length}…` : 'מעלה…'
+        );
+        const result = await uploadLessonImage(supabase, lessonId, pagesToUpload[i]);
+        if (result.error) {
+          setError(result.error);
+          break;
+        }
       }
     }
 
     setUploading(false);
+    setUploadStatus(null);
     event.target.value = '';
     reload();
   }
@@ -88,16 +110,19 @@ export function LessonImagesManager({ lessonId }: Props) {
   return (
     <div className="mt-8 max-w-lg">
       <h2 className="mb-3 text-lg font-extrabold text-ink-900">תמונות</h2>
+      <p className="mb-2 text-xs text-slate-500">
+        אפשר להעלות תמונות בודדות, או קובץ PDF שלם — כל עמוד ב-PDF יהפוך אוטומטית לתמונה נפרדת, לפי הסדר.
+      </p>
 
       <input
         type="file"
-        accept="image/*"
+        accept="image/*,application/pdf"
         multiple
         onChange={handleUpload}
         disabled={uploading}
         className="mb-4 text-sm"
       />
-      {uploading && <p className="mb-2 text-sm text-slate-500">מעלה…</p>}
+      {uploading && <p className="mb-2 text-sm text-slate-500">{uploadStatus ?? 'מעלה…'}</p>}
       {error && <p className="mb-2 text-sm text-danger">{error}</p>}
 
       {loading ? (
@@ -113,8 +138,20 @@ export function LessonImagesManager({ lessonId }: Props) {
             >
               {/* Arbitrary Storage URLs — next/image would require remotePatterns per-environment. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={image.image_url} alt="" className="h-16 w-16 rounded object-cover" />
+              <img
+                src={image.image_url}
+                alt=""
+                onClick={() => setZoomedUrl(image.image_url)}
+                className="h-16 w-16 cursor-zoom-in rounded object-cover"
+                title="לחיצה להגדלה"
+              />
               <span className="flex-1 text-xs text-slate-500">סדר: {image.sort_order}</span>
+              <button
+                onClick={() => setZoomedUrl(image.image_url)}
+                className="rounded-full border border-teal-400 px-2 py-1 text-xs text-teal-600"
+              >
+                הגדלה
+              </button>
               <button
                 onClick={() => handleMove(index, -1)}
                 disabled={index === 0 || busyId === image.id}
@@ -139,6 +176,27 @@ export function LessonImagesManager({ lessonId }: Props) {
             </li>
           ))}
         </ul>
+      )}
+
+      {zoomedUrl && (
+        <div
+          onClick={() => setZoomedUrl(null)}
+          className="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center bg-black/80 p-6"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={zoomedUrl}
+            alt=""
+            className="max-h-full max-w-full rounded-lg object-contain shadow-2xl"
+          />
+          <button
+            onClick={() => setZoomedUrl(null)}
+            aria-label="סגירה"
+            className="absolute end-6 top-6 rounded-full bg-paper-50 px-3 py-1.5 text-sm font-bold text-ink-900"
+          >
+            ✕ סגירה
+          </button>
+        </div>
       )}
     </div>
   );
