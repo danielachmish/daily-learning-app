@@ -106,12 +106,20 @@ export default function LessonsListPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-extrabold text-ink-900">לימודים</h1>
-        <Link
-          href="/lessons/new"
-          className="rounded-full bg-teal-400 px-4 py-2 text-sm font-bold text-on-teal"
-        >
-          + לימוד חדש
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/lessons/import"
+            className="rounded-full border border-teal-400 px-4 py-2 text-sm font-bold text-teal-600"
+          >
+            ייבוא חוברת חודשית
+          </Link>
+          <Link
+            href="/lessons/new"
+            className="rounded-full bg-teal-400 px-4 py-2 text-sm font-bold text-on-teal"
+          >
+            + לימוד חדש
+          </Link>
+        </div>
       </div>
 
       <div className="mb-4 flex flex-wrap gap-3">
