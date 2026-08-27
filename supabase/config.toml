@@ -391,6 +391,12 @@ deno_version = 2
 # the function itself (see supabase/functions/payment-webhook/index.ts).
 verify_jwt = false
 
+[functions.nedarim-callback]
+# Nedarim Plus's servers call this directly and cannot supply a Supabase
+# JWT — authenticated instead by checking the caller's IP against their
+# documented callback IPs (see supabase/functions/nedarim-callback/index.ts).
+verify_jwt = false
+
 [functions.send-reminder-pushes]
 # Called by a pg_cron job via net.http_post, which can't supply a Supabase
 # JWT either — authenticated instead via its own CRON_SECRET check inside

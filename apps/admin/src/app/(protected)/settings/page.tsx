@@ -6,7 +6,7 @@ import { fetchNedarimSettings, saveNedarimSettings, type NedarimSettings } from 
 import { createClient } from '../../../services/supabase/client';
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState<NedarimSettings>({ mosadId: '', apiKey: '' });
+  const [settings, setSettings] = useState<NedarimSettings>({ mosadId: '', apiValid: '', apiKey: '' });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +70,30 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-500">מפתח API</label>
+            <label className="mb-1 block text-sm font-medium text-slate-500">
+              טקסט אימות (ApiValid)
+            </label>
+            <p className="mb-1 text-xs text-slate-500">
+              משמש להטמעת דף התשלום המאובטח (האייפרם) — נמצא מול המוסד תחת "עוד ‹ מפתחות API".
+            </p>
+            <input
+              type="text"
+              value={settings.apiValid}
+              onChange={(e) => {
+                setSettings((prev) => ({ ...prev, apiValid: e.target.value }));
+                setSaved(false);
+              }}
+              disabled={saving}
+              autoComplete="off"
+              className="w-full rounded-lg border border-line bg-paper-50 px-3 py-2 text-sm text-ink-900"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-500">מפתח API (מתחיל ב-npk_)</label>
+            <p className="mb-1 text-xs text-slate-500">
+              משמש רק לפעולות בצד השרת (יצירת חיוב, ניהול הוראות קבע) — לא נחשף לאפליקציה.
+            </p>
             <input
               type="password"
               value={settings.apiKey}

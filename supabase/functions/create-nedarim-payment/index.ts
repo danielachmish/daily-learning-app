@@ -1,13 +1,22 @@
 // Creates a Nedarim Plus payment (subscription or one-time dedication).
 //
-// STATUS: infrastructure only. Everything up to "TODO: Nedarim Plus API
-// call" below is real and complete — auth, credential retrieval from the
-// admin-configured settings, and request validation. The actual call to
-// Nedarim Plus's API is still a stub, pending their technical contact's
-// answer on the exact endpoint/fields for creating a one-time charge vs a
-// recurring instruction (see docs/ discussion — no public "create a new
-// standing order" action was visible in their permission list, only
-// manage/list/pause/delete for existing ones).
+// Nedarim Plus's real integration model (confirmed directly by their
+// technical support, see the project's payment-provider notes) is an
+// EMBEDDED IFRAME, not a redirect to a hosted page: the client embeds
+// https://www.matara.pro/nedarimplus/iframe/ with a handful of query
+// params, the donor enters card details there (so the card never touches
+// our server), and the result comes back to the embedding page via
+// postMessage. This function's job is only to hand the client the params
+// needed to build that iframe — never the secret ApiPassword — after
+// validating the request server-side (real price from `settings`, real
+// dedication ownership/amount via RLS) so a client can't just embed
+// whatever amount it wants.
+//
+// The actual payment confirmation is handled exclusively by the
+// nedarim-callback function (server-to-server, IP-checked) — exactly like
+// payment-webhook is the only place Stripe payments get marked paid. The
+// postMessage the client receives is for UX only (show a "processing"/
+// "thank you" state); it is never trusted to update payment_status itself.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 import { corsHeaders } from '../_shared/cors.ts';
@@ -25,8 +34,8 @@ interface DedicationRequest {
 type PaymentRequest = SubscriptionRequest | DedicationRequest;
 
 interface NedarimCredentials {
-  mosadId: string;
-  apiKey: string;
+  mosad: string;
+  apiValid: string;
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -42,16 +51,16 @@ async function getNedarimCredentials(
   const { data, error } = await serviceClient
     .from('payment_provider_settings')
     .select('key, value')
-    .in('key', ['nedarim_mosad_id', 'nedarim_api_key']);
+    .in('key', ['nedarim_mosad_id', 'nedarim_api_valid']);
 
   if (error || !data) return null;
 
   const map = new Map(data.map((row: { key: string; value: string }) => [row.key, row.value]));
-  const mosadId = map.get('nedarim_mosad_id');
-  const apiKey = map.get('nedarim_api_key');
+  const mosad = map.get('nedarim_mosad_id');
+  const apiValid = map.get('nedarim_api_valid');
 
-  if (!mosadId || !apiKey) return null;
-  return { mosadId, apiKey };
+  if (!mosad || !apiValid) return null;
+  return { mosad, apiValid };
 }
 
 Deno.serve(async (req: Request) => {
@@ -75,11 +84,9 @@ Deno.serve(async (req: Request) => {
     global: { headers: { Authorization: authHeader } },
   });
 
-  // A separate service-role client is required for the credentials lookup
-  // specifically: payment_provider_settings is admin-only by RLS, and a
-  // regular user's JWT must never be able to read it — the service role
-  // bypasses RLS entirely, which is exactly why it's the only thing
-  // allowed to touch this table outside the admin panel.
+  // A separate service-role client is required for payment_provider_settings
+  // (admin-only by RLS) and for writing the pending `payments` row —
+  // regular users can't insert into payments directly.
   const serviceClient = createClient(supabaseUrl, serviceRoleKey);
 
   const {
@@ -91,6 +98,12 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: 'Not authenticated' }, 401);
   }
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name, phone, email')
+    .eq('id', user.id)
+    .single();
+
   let body: PaymentRequest;
   try {
     body = (await req.json()) as PaymentRequest;
@@ -101,10 +114,17 @@ Deno.serve(async (req: Request) => {
   const credentials = await getNedarimCredentials(serviceClient);
   if (!credentials) {
     return jsonResponse(
-      { error: 'Nedarim Plus is not configured yet — an admin needs to set the Mosad ID and API key in settings.' },
+      { error: 'Nedarim Plus is not configured yet — an admin needs to set Mosad ID / ApiValid in settings.' },
       503
     );
   }
+
+  const callBackUrl = `${supabaseUrl}/functions/v1/nedarim-callback`;
+  // Nedarim charges standing orders on a fixed day-of-month (1-28, per
+  // their docs — no 29/30/31 to stay valid in every month). Using "today"
+  // (clamped) means the first real charge lands roughly a month from now,
+  // same as how the old Stripe subscription flow started billing.
+  const day = Math.min(28, Math.max(1, new Date().getDate()));
 
   try {
     if (body.type === 'subscription') {
@@ -112,11 +132,53 @@ Deno.serve(async (req: Request) => {
         return jsonResponse({ error: 'planType must be "monthly" or "yearly"' }, 400);
       }
 
-      // TODO: Nedarim Plus API call — create a recurring charge (הוראת
-      // קבע) for this plan and return the hosted payment page URL. Needs
-      // confirmation from their technical contact on how a NEW standing
-      // order is actually created (see comment at top of file).
-      return jsonResponse({ error: 'Nedarim Plus subscription payments are not implemented yet.' }, 501);
+      const { data: priceSetting, error: priceError } = await serviceClient
+        .from('settings')
+        .select('value')
+        .eq('key', body.planType === 'monthly' ? 'monthly_price' : 'yearly_price')
+        .single();
+
+      if (priceError || !priceSetting) {
+        return jsonResponse({ error: 'Subscription pricing is not configured.' }, 503);
+      }
+      const amount = Number(priceSetting.value);
+
+      const { data: payment, error: paymentError } = await serviceClient
+        .from('payments')
+        .insert({
+          user_id: user.id,
+          payment_type: 'subscription',
+          related_id: null,
+          amount,
+          currency: 'ILS',
+          status: 'pending',
+          payment_provider: 'nedarim_plus',
+        })
+        .select('id')
+        .single();
+
+      if (paymentError || !payment) {
+        return jsonResponse({ error: 'Failed to start payment' }, 500);
+      }
+
+      return jsonResponse({
+        iframeUrl: 'https://www.matara.pro/nedarimplus/iframe/',
+        params: {
+          Mosad: credentials.mosad,
+          ApiValid: credentials.apiValid,
+          PaymentType: 'HK',
+          Amount: amount,
+          Tashlumim: '', // blank = ongoing standing order, no fixed number of charges
+          Day: day,
+          CallBack: callBackUrl,
+          Param2: payment.id,
+          // Nedarim Plus pre-fills the payer's details in their form with these.
+          FirstName: profile?.full_name ?? '',
+          Phone: profile?.phone ?? '',
+          Mail: profile?.email ?? '',
+        },
+        paymentId: payment.id,
+      });
     }
 
     if (body.type === 'dedication') {
@@ -137,10 +199,40 @@ Deno.serve(async (req: Request) => {
         return jsonResponse({ error: 'This dedication is not awaiting payment' }, 400);
       }
 
-      // TODO: Nedarim Plus API call — create a single charge (ביצוע חיוב
-      // בודד) for dedication.amount and return the hosted payment page
-      // URL, using credentials.mosadId / credentials.apiKey.
-      return jsonResponse({ error: 'Nedarim Plus dedication payments are not implemented yet.' }, 501);
+      const { data: payment, error: paymentError } = await serviceClient
+        .from('payments')
+        .insert({
+          user_id: user.id,
+          payment_type: 'dedication',
+          related_id: dedication.id,
+          amount: dedication.amount,
+          currency: 'ILS',
+          status: 'pending',
+          payment_provider: 'nedarim_plus',
+        })
+        .select('id')
+        .single();
+
+      if (paymentError || !payment) {
+        return jsonResponse({ error: 'Failed to start payment' }, 500);
+      }
+
+      return jsonResponse({
+        iframeUrl: 'https://www.matara.pro/nedarimplus/iframe/',
+        params: {
+          Mosad: credentials.mosad,
+          ApiValid: credentials.apiValid,
+          PaymentType: 'Ragil',
+          Amount: dedication.amount,
+          Tashlumim: '1',
+          CallBack: callBackUrl,
+          Param2: payment.id,
+          FirstName: profile?.full_name ?? '',
+          Phone: profile?.phone ?? '',
+          Mail: profile?.email ?? '',
+        },
+        paymentId: payment.id,
+      });
     }
 
     return jsonResponse({ error: 'Invalid request type' }, 400);
