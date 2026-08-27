@@ -7,25 +7,28 @@
 // client could fake a postMessage, it can't fake a POST from Nedarim's
 // own servers.
 //
-// ⚠ FIELD NAMES BELOW ARE BEST-EFFORT, NOT CONFIRMED. Nedarim's support
-// answer confirmed there IS a JSON callback and that Param2 is
-// recommended specifically so we can cross-reference it against our
-// stored request — but did not give the exact JSON shape (it lives in
-// their dashboard's own API docs, under "עוד > תיעוד API", which only the
-// org can access). This checks several plausible field-name variants
-// (their other params are PascalCase: Mosad, Amount, Tashlumim) and
-// always stores the full raw body in payments.raw_event regardless, so
-// nothing is lost even where the guess is wrong. Once someone downloads
-// that MD doc from the dashboard, the STATUS_FIELDS / SUCCESS_VALUES
-// lists below should be corrected against it.
+// Status/Message field names are confirmed against Nedarim's own sample
+// integration file (matara.pro/nedarimplus/iframe/sample2.html — real
+// source code): the client-side TransactionResponse postMessage carries
+// `Value: { Status, Message, ... }` with Status === 'Error' meaning
+// failure, everything else meaning success. This server-side callback is
+// presumed to carry the same underlying transaction-result shape (Param2
+// itself is confirmed by Nedarim's support to come through, specifically
+// so it can be cross-referenced against our stored request) — but that
+// presumption isn't independently confirmed the way the client-side
+// shape is, since the callback's exact JSON schema lives in their
+// dashboard's own API docs ("עוד > תיעוד API", org-account-only). The
+// fallback candidates below exist for that gap; the full raw body is
+// always stored in payments.raw_event regardless, so nothing is lost
+// even where a fallback guess is wrong.
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 
 const ALLOWED_IPS = ['18.196.146.117', '18.194.219.73'];
 
-// Candidate field names for "did this succeed", checked in order.
+// Confirmed field name, checked first; the rest are unconfirmed fallbacks.
 const STATUS_FIELDS = ['Status', 'Sstatus', 'StatusCode', 'Success', 'Dvarim'];
 const SUCCESS_VALUES = ['1', 'true', 'ok', 'success', 'תקין'];
-const ERROR_FIELDS = ['ErrorMessage', 'Error', 'ErrorCode', 'Shgia'];
+const ERROR_FIELDS = ['Message', 'ErrorMessage', 'Error', 'ErrorCode', 'Shgia'];
 // Candidate field names for the transaction/standing-order id Nedarim assigns.
 const TRANSACTION_ID_FIELDS = ['TransactionId', 'Id', 'Zeout', 'Hk', 'HkMspar'];
 
@@ -48,6 +51,12 @@ function findField(body: Record<string, unknown>, candidates: string[]): string 
 }
 
 function looksSuccessful(body: Record<string, unknown>): boolean {
+  // Confirmed pattern (see file header): Status === 'Error' is failure,
+  // any other Status value is success.
+  if (typeof body.Status === 'string') return body.Status !== 'Error';
+
+  // Everything below is unconfirmed-fallback for if the callback's shape
+  // turns out to differ from the client-side postMessage shape.
   const statusValue = findField(body, STATUS_FIELDS);
   if (statusValue && SUCCESS_VALUES.includes(statusValue.toLowerCase())) return true;
 

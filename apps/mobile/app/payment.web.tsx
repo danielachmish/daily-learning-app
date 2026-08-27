@@ -3,11 +3,11 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import type { NedarimIframeParams } from '../src/services/payments';
+import type { NedarimTransactionValue } from '../src/services/payments';
 import { supabase } from '../src/services/supabase';
 import { colors } from '../src/theme/colors';
 
-type Phase = 'paying' | 'confirming' | 'success' | 'failed' | 'timeout';
+type Phase = 'loading' | 'paying' | 'confirming' | 'success' | 'failed' | 'timeout';
 
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLLS = 45; // ~90 seconds
@@ -15,35 +15,51 @@ const MAX_POLLS = 45; // ~90 seconds
 const iframeStyle: React.CSSProperties = { flex: 1, width: '100%', border: 'none' };
 
 /**
- * Embeds Nedarim Plus's secure payment iframe directly — card details are
- * entered there and never touch our app. The iframe's own postMessage
- * result is used only to switch this screen into "confirming" mode
- * sooner; it is NOT trusted as proof of payment (a malicious client could
- * fake a postMessage). The actual answer always comes from polling our
- * own `payments` row, which only the server-side nedarim-callback
- * function (verified by Nedarim's source IP) is allowed to mark paid —
- * same trust boundary as the old Stripe webhook.
+ * Embeds Nedarim Plus's secure payment iframe. Confirmed against their own
+ * sample integration file (matara.pro/nedarimplus/iframe/sample2.html —
+ * real source code, not just their prose description of the flow):
+ *
+ * - The iframe is loaded with NO payment data in its URL.
+ * - Once it's ready, the parent posts
+ *   `{ Name: 'FinishTransaction2', Value: {...} }` to it via postMessage
+ *   — that's PostNedarim() in their sample. The card is entered inside
+ *   the iframe itself, never on this page.
+ * - The iframe posts progress/result back the same way: `{ Name:
+ *   'Height', Value: <px> }` while rendering, and finally
+ *   `{ Name: 'TransactionResponse', Value: { Status, Message, ... } }`
+ *   where Status === 'Error' means it failed — that's ReadPostMessage()
+ *   in their sample.
+ *
+ * That TransactionResponse is a real, confirmed signal (unlike a generic
+ * "some message arrived"), but it's still only used for UX here — the
+ * database is only ever updated by nedarim-callback (server-to-server,
+ * IP-checked), so a spoofed postMessage can't fake a paid status.
  */
 export default function PaymentScreenWeb() {
-  const { paymentId, iframeUrl, params } = useLocalSearchParams<{
+  const { paymentId, iframeUrl, value } = useLocalSearchParams<{
     paymentId: string;
     iframeUrl: string;
-    params: string;
+    value: string;
   }>();
 
-  const [phase, setPhase] = useState<Phase>('paying');
+  const [phase, setPhase] = useState<Phase>('loading');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [iframeHeight, setIframeHeight] = useState(480);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const sentTransactionRef = useRef(false);
   const pollCountRef = useRef(0);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const iframeParams: NedarimIframeParams | null = params ? JSON.parse(params) : null;
-  const src = iframeParams
-    ? `${iframeUrl}?${new URLSearchParams(
-        Object.entries(iframeParams).reduce<Record<string, string>>((acc, [key, value]) => {
-          acc[key] = String(value ?? '');
-          return acc;
-        }, {})
-      ).toString()}`
-    : null;
+  const transactionValue: NedarimTransactionValue | null = value ? JSON.parse(value) : null;
+
+  function sendTransactionToIframe() {
+    if (sentTransactionRef.current) return;
+    const win = iframeRef.current?.contentWindow;
+    if (!win || !transactionValue) return;
+    sentTransactionRef.current = true;
+    win.postMessage({ Name: 'FinishTransaction2', Value: transactionValue }, '*');
+    setPhase('paying');
+  }
 
   function startPolling() {
     if (pollTimerRef.current) return;
@@ -74,12 +90,23 @@ export default function PaymentScreenWeb() {
   }
 
   useEffect(() => {
-    // Any message from the iframe is treated only as a hint to start
-    // confirming sooner — the content isn't parsed/trusted, since we
-    // don't have Nedarim's exact postMessage schema confirmed.
     function handleMessage(event: MessageEvent) {
-      if (typeof event.data !== 'undefined') {
-        startPolling();
+      const name = event.data?.Name;
+      if (name === 'Height') {
+        const px = parseInt(event.data.Value, 10);
+        if (!Number.isNaN(px)) setIframeHeight(px + 15);
+        // The iframe reporting its rendered height is also our best
+        // available "it's ready" signal — matches their sample, which
+        // uses this same event to hide its own loading spinner.
+        sendTransactionToIframe();
+      } else if (name === 'TransactionResponse') {
+        const result = event.data.Value ?? {};
+        if (result.Status === 'Error') {
+          setErrorMessage(result.Message ?? 'התשלום לא הושלם.');
+          setPhase('failed');
+        } else {
+          startPolling();
+        }
       }
     }
     window.addEventListener('message', handleMessage);
@@ -97,7 +124,7 @@ export default function PaymentScreenWeb() {
     }
   }, [phase]);
 
-  if (!src || !paymentId) {
+  if (!iframeUrl || !transactionValue || !paymentId) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <Text style={styles.message}>חסרים פרטי תשלום. יש לחזור ולנסות שוב.</Text>
@@ -107,7 +134,7 @@ export default function PaymentScreenWeb() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      {phase === 'paying' && (
+      {(phase === 'loading' || phase === 'paying') && (
         <>
           <View style={styles.header}>
             <Text style={styles.headerText}>תשלום מאובטח</Text>
@@ -115,13 +142,13 @@ export default function PaymentScreenWeb() {
               <Text style={styles.cancelText}>ביטול</Text>
             </Pressable>
           </View>
-          {/* Raw <iframe> — valid on web via react-native-web's JSX passthrough.
-              Plain CSS object, not StyleSheet.create: `border` isn't a
-              recognized RN ViewStyle property. */}
-          <iframe src={src} style={iframeStyle} />
-          <Pressable style={styles.manualCheckButton} onPress={startPolling}>
-            <Text style={styles.manualCheckText}>סיימתי לשלם — בדוק סטטוס</Text>
-          </Pressable>
+          {/* Raw <iframe> — valid on web via react-native-web's JSX passthrough. */}
+          <iframe
+            ref={iframeRef}
+            src={iframeUrl}
+            style={{ ...iframeStyle, height: iframeHeight, flex: undefined }}
+            onLoad={sendTransactionToIframe}
+          />
         </>
       )}
 
@@ -140,7 +167,7 @@ export default function PaymentScreenWeb() {
 
       {phase === 'failed' && (
         <View style={styles.centerFill}>
-          <Text style={styles.errorText}>התשלום לא הושלם.</Text>
+          <Text style={styles.errorText}>{errorMessage ?? 'התשלום לא הושלם.'}</Text>
           <Pressable style={styles.manualCheckButton} onPress={() => router.back()}>
             <Text style={styles.manualCheckText}>לנסות שוב</Text>
           </Pressable>

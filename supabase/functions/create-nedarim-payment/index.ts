@@ -1,13 +1,18 @@
 // Creates a Nedarim Plus payment (subscription or one-time dedication).
 //
-// Nedarim Plus's real integration model (confirmed directly by their
-// technical support, see the project's payment-provider notes) is an
-// EMBEDDED IFRAME, not a redirect to a hosted page: the client embeds
-// https://www.matara.pro/nedarimplus/iframe/ with a handful of query
-// params, the donor enters card details there (so the card never touches
-// our server), and the result comes back to the embedding page via
-// postMessage. This function's job is only to hand the client the params
-// needed to build that iframe — never the secret ApiPassword — after
+// Nedarim Plus's real integration model is an EMBEDDED IFRAME loaded with
+// no payment data in its URL — the parent page posts the actual payment
+// data to it via postMessage once loaded, and the donor enters card
+// details there (so the card never touches our server). Confirmed against
+// Nedarim's own sample integration file (matara.pro/nedarimplus/iframe/
+// sample2.html — a real code sample, not just their prose description):
+// the message posted to the iframe has the shape
+// `{ Name: 'FinishTransaction2', Value: { Mosad, ApiValid, ... } }`, and
+// the response posted back has the shape
+// `{ Name: 'TransactionResponse', Value: { Status, Message, ... } }`
+// where Status === 'Error' means failure. See app/payment.web.tsx for the
+// client side of this exchange. This function's job is only to hand the
+// client the Value fields to send — never the secret ApiPassword — after
 // validating the request server-side (real price from `settings`, real
 // dedication ownership/amount via RLS) so a client can't just embed
 // whatever amount it wants.
@@ -162,20 +167,26 @@ Deno.serve(async (req: Request) => {
       }
 
       return jsonResponse({
-        iframeUrl: 'https://www.matara.pro/nedarimplus/iframe/',
-        params: {
+        iframeUrl: 'https://matara.pro/nedarimplus/iframe?language=he',
+        value: {
           Mosad: credentials.mosad,
           ApiValid: credentials.apiValid,
           PaymentType: 'HK',
+          Currency: '1',
           Amount: amount,
           Tashlumim: '', // blank = ongoing standing order, no fixed number of charges
           Day: day,
-          CallBack: callBackUrl,
-          Param2: payment.id,
-          // Nedarim Plus pre-fills the payer's details in their form with these.
+          Zeout: '',
           FirstName: profile?.full_name ?? '',
+          LastName: '',
+          Street: '',
+          City: '',
           Phone: profile?.phone ?? '',
           Mail: profile?.email ?? '',
+          Groupe: '',
+          Comment: 'מנוי לימוד יומי',
+          CallBack: callBackUrl,
+          Param2: payment.id,
         },
         paymentId: payment.id,
       });
@@ -218,18 +229,25 @@ Deno.serve(async (req: Request) => {
       }
 
       return jsonResponse({
-        iframeUrl: 'https://www.matara.pro/nedarimplus/iframe/',
-        params: {
+        iframeUrl: 'https://matara.pro/nedarimplus/iframe?language=he',
+        value: {
           Mosad: credentials.mosad,
           ApiValid: credentials.apiValid,
           PaymentType: 'Ragil',
+          Currency: '1',
           Amount: dedication.amount,
           Tashlumim: '1',
-          CallBack: callBackUrl,
-          Param2: payment.id,
+          Zeout: '',
           FirstName: profile?.full_name ?? '',
+          LastName: '',
+          Street: '',
+          City: '',
           Phone: profile?.phone ?? '',
           Mail: profile?.email ?? '',
+          Groupe: '',
+          Comment: 'הקדשת לימוד יומי',
+          CallBack: callBackUrl,
+          Param2: payment.id,
         },
         paymentId: payment.id,
       });
