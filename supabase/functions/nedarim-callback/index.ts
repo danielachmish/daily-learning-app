@@ -1,36 +1,23 @@
 // Server-to-server payment confirmation from Nedarim Plus (the CallBack
-// URL passed in create-nedarim-payment). This is the ONLY place a Nedarim
-// payment actually gets marked paid — mirrors payment-webhook (Stripe)
-// being the sole writer of payment_status there. The client-side
+// URL passed in create-nedarim-payment). This is the ONLY real-time place a
+// Nedarim payment actually gets marked paid — mirrors payment-webhook
+// (Stripe) being the sole writer of payment_status there. The client-side
 // postMessage the iframe sends back is for UX only (show a "thank you"
-// state) and is never trusted to move money on its own; a malicious
-// client could fake a postMessage, it can't fake a POST from Nedarim's
-// own servers.
+// state) and is never trusted to move money on its own; a malicious client
+// could fake a postMessage, it can't fake a POST from Nedarim's own
+// servers. reconcile-nedarim-history is the periodic safety net for the
+// rare case this callback is lost in transit — Nedarim's own docs say
+// "העדכון נשלח פעם אחת בלבד" (sent once only), no automatic retry.
 //
-// Status/Message field names are confirmed against Nedarim's own sample
-// integration file (matara.pro/nedarimplus/iframe/sample2.html — real
-// source code): the client-side TransactionResponse postMessage carries
-// `Value: { Status, Message, ... }` with Status === 'Error' meaning
-// failure, everything else meaning success. This server-side callback is
-// presumed to carry the same underlying transaction-result shape (Param2
-// itself is confirmed by Nedarim's support to come through, specifically
-// so it can be cross-referenced against our stored request) — but that
-// presumption isn't independently confirmed the way the client-side
-// shape is, since the callback's exact JSON schema lives in their
-// dashboard's own API docs ("עוד > תיעוד API", org-account-only). The
-// fallback candidates below exist for that gap; the full raw body is
-// always stored in payments.raw_event regardless, so nothing is lost
-// even where a fallback guess is wrong.
+// Field names below are now confirmed against Nedarim Plus's full official
+// API documentation (obtained directly from the org): Status/Message/ID/
+// TransactionId/KevaId are exact. Status is 'OK' or 'Error' — anything
+// else would be unexpected, but treated as failure defensively.
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 
-const ALLOWED_IPS = ['18.196.146.117', '18.194.219.73'];
+import { settleDedicationPaid, settlePaymentFailure, settleSubscriptionPaid } from '../_shared/nedarimSettlement.ts';
 
-// Confirmed field name, checked first; the rest are unconfirmed fallbacks.
-const STATUS_FIELDS = ['Status', 'Sstatus', 'StatusCode', 'Success', 'Dvarim'];
-const SUCCESS_VALUES = ['1', 'true', 'ok', 'success', 'תקין'];
-const ERROR_FIELDS = ['Message', 'ErrorMessage', 'Error', 'ErrorCode', 'Shgia'];
-// Candidate field names for the transaction/standing-order id Nedarim assigns.
-const TRANSACTION_ID_FIELDS = ['TransactionId', 'Id', 'Zeout', 'Hk', 'HkMspar'];
+const ALLOWED_IPS = ['18.196.146.117', '18.194.219.73'];
 
 function getClientIp(req: Request): string | null {
   // Supabase's edge runtime (like most platforms behind a proxy) exposes
@@ -41,32 +28,10 @@ function getClientIp(req: Request): string | null {
   return req.headers.get('x-real-ip');
 }
 
-function findField(body: Record<string, unknown>, candidates: string[]): string | null {
-  for (const key of candidates) {
-    if (key in body && body[key] !== null && body[key] !== undefined) {
-      return String(body[key]);
-    }
-  }
-  return null;
-}
-
-function looksSuccessful(body: Record<string, unknown>): boolean {
-  // Confirmed pattern (see file header): Status === 'Error' is failure,
-  // any other Status value is success.
-  if (typeof body.Status === 'string') return body.Status !== 'Error';
-
-  // Everything below is unconfirmed-fallback for if the callback's shape
-  // turns out to differ from the client-side postMessage shape.
-  const statusValue = findField(body, STATUS_FIELDS);
-  if (statusValue && SUCCESS_VALUES.includes(statusValue.toLowerCase())) return true;
-
-  const errorValue = findField(body, ERROR_FIELDS);
-  // No recognizable error field and no explicit status field to check
-  // against — fall back to "no error reported" as a weak success signal.
-  if (!errorValue && !statusValue) return true;
-  if (errorValue && (errorValue === '0' || errorValue.trim() === '')) return true;
-
-  return false;
+function stringField(body: Record<string, unknown>, key: string): string | null {
+  const value = body[key];
+  if (value === null || value === undefined || value === '') return null;
+  return String(value);
 }
 
 Deno.serve(async (req: Request) => {
@@ -89,7 +54,7 @@ Deno.serve(async (req: Request) => {
     return new Response('Invalid JSON', { status: 400 });
   }
 
-  const paymentId = findField(body, ['Param2']);
+  const paymentId = stringField(body, 'Param2');
   if (!paymentId) {
     console.error('nedarim-callback: missing Param2, cannot match to a pending payment:', rawBody);
     return new Response('Missing Param2', { status: 400 });
@@ -111,14 +76,15 @@ Deno.serve(async (req: Request) => {
   }
 
   // Idempotency: if this payment was already resolved, don't double-process
-  // (e.g. Nedarim retrying a callback that already succeeded on our end).
+  // (e.g. Nedarim retrying a callback that already succeeded on our end, or
+  // reconcile-nedarim-history having already caught it first).
   if (payment.status !== 'pending') {
     return new Response('Already processed', { status: 200 });
   }
 
-  // Cross-check the amount, as Nedarim's own support recommended, in case
-  // Param2 alone were ever replayed against a different amount.
-  const reportedAmount = findField(body, ['Amount', 'Sum']);
+  // Cross-check the amount, as Nedarim's own docs recommend, in case Param2
+  // alone were ever replayed against a different amount.
+  const reportedAmount = stringField(body, 'Amount');
   if (reportedAmount && Math.abs(Number(reportedAmount) - Number(payment.amount)) > 0.01) {
     console.error('nedarim-callback: amount mismatch', { paymentId, expected: payment.amount, reportedAmount });
     await supabase
@@ -128,20 +94,21 @@ Deno.serve(async (req: Request) => {
     return new Response('Amount mismatch', { status: 400 });
   }
 
-  const success = looksSuccessful(body);
-  const transactionId = findField(body, TRANSACTION_ID_FIELDS);
+  const success = body.Status !== 'Error';
+  const transactionId = stringField(body, 'ID') ?? stringField(body, 'TransactionId');
+  const kevaId = stringField(body, 'KevaId');
   const today = new Date().toISOString().slice(0, 10);
 
   try {
     if (!success) {
-      await handleFailure(supabase, payment, body, transactionId);
+      await settlePaymentFailure(supabase as unknown as SupabaseClient, payment, body, transactionId);
       return new Response(JSON.stringify({ received: true }), { status: 200 });
     }
 
     if (payment.payment_type === 'subscription') {
-      await handleSubscriptionPaid(supabase, payment, body, transactionId, today);
+      await settleSubscriptionPaid(supabase as unknown as SupabaseClient, payment, body, transactionId, kevaId, today);
     } else {
-      await handleDedicationPaid(supabase, payment, body, transactionId, today);
+      await settleDedicationPaid(supabase as unknown as SupabaseClient, payment, body, transactionId, today);
     }
 
     return new Response(JSON.stringify({ received: true }), { status: 200 });
@@ -150,122 +117,3 @@ Deno.serve(async (req: Request) => {
     return new Response('Handler failed', { status: 500 });
   }
 });
-
-interface PaymentRow {
-  id: string;
-  payment_type: string;
-  related_id: string | null;
-  amount: number;
-  status: string;
-}
-
-async function handleFailure(
-  supabase: SupabaseClient,
-  payment: PaymentRow,
-  rawEvent: Record<string, unknown>,
-  transactionId: string | null
-): Promise<void> {
-  await supabase
-    .from('payments')
-    .update({
-      status: 'failed',
-      provider_payment_id: transactionId,
-      raw_event: rawEvent,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', payment.id);
-
-  if (payment.payment_type === 'dedication' && payment.related_id) {
-    await supabase.from('dedications').update({ payment_status: 'failed' }).eq('id', payment.related_id);
-  }
-}
-
-async function handleSubscriptionPaid(
-  supabase: SupabaseClient,
-  payment: PaymentRow,
-  rawEvent: Record<string, unknown>,
-  transactionId: string | null,
-  today: string
-): Promise<void> {
-  // We need the user id and plan type, which live on the payment row's
-  // owner — fetched fresh since create-nedarim-payment didn't persist
-  // plan_type on the payments row itself.
-  const { data: fullPayment } = await supabase.from('payments').select('user_id').eq('id', payment.id).single();
-  const userId = fullPayment?.user_id;
-  if (!userId) throw new Error('Payment has no associated user');
-
-  // Plan type isn't stored on `payments` — infer monthly vs yearly from
-  // amount against the configured prices (set by the same admin settings
-  // screen that configured Nedarim credentials).
-  const { data: priceRows } = await supabase
-    .from('settings')
-    .select('key, value')
-    .in('key', ['monthly_price', 'yearly_price']);
-  const prices = new Map((priceRows ?? []).map((r: { key: string; value: string }) => [r.key, Number(r.value)]));
-  const planType = Math.abs(payment.amount - (prices.get('yearly_price') ?? -1)) < 0.01 ? 'yearly' : 'monthly';
-
-  const startDate = new Date();
-  const endDate = new Date(startDate);
-  if (planType === 'yearly') endDate.setFullYear(endDate.getFullYear() + 1);
-  else endDate.setMonth(endDate.getMonth() + 1);
-
-  const { data: subscription, error: subscriptionError } = await supabase
-    .from('subscriptions')
-    .insert({
-      user_id: userId,
-      plan_type: planType,
-      status: 'active',
-      start_date: startDate.toISOString().slice(0, 10),
-      end_date: endDate.toISOString().slice(0, 10),
-      payment_provider: 'nedarim_plus',
-      provider_subscription_id: transactionId,
-    })
-    .select('id')
-    .single();
-  if (subscriptionError) throw subscriptionError;
-
-  await supabase
-    .from('payments')
-    .update({
-      status: 'paid',
-      related_id: subscription.id,
-      provider_payment_id: transactionId,
-      raw_event: rawEvent,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', payment.id);
-
-  await supabase.rpc('increment_daily_revenue', {
-    p_date: today,
-    p_subscription_amount: payment.amount,
-    p_dedication_amount: 0,
-  });
-}
-
-async function handleDedicationPaid(
-  supabase: SupabaseClient,
-  payment: PaymentRow,
-  rawEvent: Record<string, unknown>,
-  transactionId: string | null,
-  today: string
-): Promise<void> {
-  if (!payment.related_id) throw new Error('Dedication payment has no related dedication');
-
-  await supabase.from('dedications').update({ payment_status: 'paid' }).eq('id', payment.related_id);
-
-  await supabase
-    .from('payments')
-    .update({
-      status: 'paid',
-      provider_payment_id: transactionId,
-      raw_event: rawEvent,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', payment.id);
-
-  await supabase.rpc('increment_daily_revenue', {
-    p_date: today,
-    p_subscription_amount: 0,
-    p_dedication_amount: payment.amount,
-  });
-}

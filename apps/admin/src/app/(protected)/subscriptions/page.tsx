@@ -8,6 +8,7 @@ import {
   cancelSubscription,
   extendSubscription,
   fetchSubscriptions,
+  manageNedarimKeva,
   type PagedSubscriptions,
   type SubscriptionFilters,
 } from '../../../services/subscriptions';
@@ -65,11 +66,40 @@ export default function SubscriptionsListPage() {
     reload();
   }
 
+  const isNedarim = (subscription: SubscriptionRow) =>
+    subscription.payment_provider === 'nedarim_plus' && !!subscription.provider_subscription_id;
+
   async function handleCancel(subscription: SubscriptionRow) {
+    if (isNedarim(subscription)) {
+      if (!confirm('לבטל את הוראת הקבע מול נדרים פלוס לצמיתות? הכרטיס יפסיק להיות מחויב.')) return;
+      setBusyId(subscription.id);
+      const result = await manageNedarimKeva(subscription.id, 'cancel');
+      setBusyId(null);
+      if (result.error) {
+        alert(result.error);
+        return;
+      }
+      reload();
+      return;
+    }
+
     if (!confirm('לבטל את המנוי הזה?')) return;
     setBusyId(subscription.id);
     const supabase = createClient();
     const result = await cancelSubscription(supabase, subscription.id);
+    setBusyId(null);
+    if (result.error) {
+      alert(result.error);
+      return;
+    }
+    reload();
+  }
+
+  async function handleFreezeToggle(subscription: SubscriptionRow) {
+    const freezing = !subscription.keva_frozen_at;
+    if (!confirm(freezing ? 'להקפיא את החיובים הבאים בהוראת הקבע?' : 'להפעיל מחדש את הוראת הקבע?')) return;
+    setBusyId(subscription.id);
+    const result = await manageNedarimKeva(subscription.id, freezing ? 'freeze' : 'reactivate');
     setBusyId(null);
     if (result.error) {
       alert(result.error);
@@ -142,7 +172,14 @@ export default function SubscriptionsListPage() {
                   <div className="text-xs text-slate-300">{subscription.profiles?.email}</div>
                 </td>
                 <td className="py-2 pe-4">{subscription.plan_type === 'monthly' ? 'חודשי' : 'שנתי'}</td>
-                <td className="py-2 pe-4">{subscription.status}</td>
+                <td className="py-2 pe-4">
+                  {subscription.status}
+                  {subscription.keva_frozen_at && (
+                    <span className="ms-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+                      הוראת קבע מוקפאת
+                    </span>
+                  )}
+                </td>
                 <td className="py-2 pe-4">{subscription.end_date}</td>
                 <td className="py-2 pe-4">
                   <div className="flex flex-wrap items-center gap-2">
@@ -161,12 +198,21 @@ export default function SubscriptionsListPage() {
                     >
                       הארך
                     </button>
+                    {isNedarim(subscription) && subscription.status !== 'canceled' && (
+                      <button
+                        onClick={() => handleFreezeToggle(subscription)}
+                        disabled={busyId === subscription.id}
+                        className="text-slate-500 hover:underline disabled:opacity-40"
+                      >
+                        {subscription.keva_frozen_at ? 'הפעל מחדש' : 'הקפא הוראת קבע'}
+                      </button>
+                    )}
                     <button
                       onClick={() => handleCancel(subscription)}
                       disabled={busyId === subscription.id || subscription.status === 'canceled'}
                       className="text-danger hover:underline disabled:opacity-40"
                     >
-                      בטל
+                      {isNedarim(subscription) ? 'בטל הוראת קבע' : 'בטל'}
                     </button>
                   </div>
                 </td>

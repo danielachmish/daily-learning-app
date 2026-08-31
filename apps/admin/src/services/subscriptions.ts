@@ -23,7 +23,7 @@ interface Result<T> {
 }
 
 const SUBSCRIPTION_COLUMNS =
-  'id, user_id, plan_type, status, start_date, end_date, payment_provider, provider_customer_id, provider_subscription_id, created_at, updated_at, profiles(full_name, email)';
+  'id, user_id, plan_type, status, start_date, end_date, payment_provider, provider_customer_id, provider_subscription_id, keva_frozen_at, created_at, updated_at, profiles(full_name, email)';
 
 export async function fetchSubscriptions(
   supabase: SupabaseClient,
@@ -65,4 +65,29 @@ export async function extendSubscription(
 export async function cancelSubscription(supabase: SupabaseClient, id: string): Promise<{ error: string | null }> {
   const { error } = await supabase.from('subscriptions').update({ status: 'canceled' }).eq('id', id);
   return { error: error?.message ?? null };
+}
+
+/**
+ * Freezes, reactivates, or cancels the actual Nedarim Plus standing order
+ * behind a subscription (not just our own DB row) — see
+ * apps/admin/src/app/api/subscriptions/keva/route.ts. Use this instead of
+ * cancelSubscription for anything with payment_provider === 'nedarim_plus',
+ * or the customer's card keeps getting charged after "cancellation".
+ */
+export async function manageNedarimKeva(
+  subscriptionId: string,
+  action: 'freeze' | 'reactivate' | 'cancel'
+): Promise<{ error: string | null }> {
+  try {
+    const resp = await fetch('/api/subscriptions/keva', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscriptionId, action }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) return { error: data.error ?? 'הפעולה נכשלה.' };
+    return { error: null };
+  } catch {
+    return { error: 'שגיאת תקשורת.' };
+  }
 }

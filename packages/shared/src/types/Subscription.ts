@@ -11,6 +11,8 @@ export interface Subscription {
   payment_provider: string | null;
   provider_customer_id: string | null;
   provider_subscription_id: string | null;
+  /** Set when an admin freezes the Nedarim Plus standing order (DisableKeva); cleared on reactivate. */
+  keva_frozen_at: string | null;
   created_at: string;
   updated_at: string;
 }

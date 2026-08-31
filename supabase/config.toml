@@ -403,6 +403,17 @@ verify_jwt = false
 # the function (see supabase/functions/send-reminder-pushes/index.ts).
 verify_jwt = false
 
+[functions.nedarim-siruv-webhook]
+# Nedarim Plus's servers call this directly (their separate decline/
+# standing-order-failure webhook) and cannot supply a Supabase JWT —
+# authenticated instead by checking the caller's IP, same as nedarim-callback.
+verify_jwt = false
+
+[functions.reconcile-nedarim-history]
+# Called by a pg_cron job via net.http_post — authenticated via its own
+# CRON_SECRET check inside the function, same pattern as send-reminder-pushes.
+verify_jwt = false
+
 [edge_runtime.secrets]
 STRIPE_SECRET_KEY = "env(STRIPE_SECRET_KEY)"
 STRIPE_WEBHOOK_SECRET = "env(STRIPE_WEBHOOK_SECRET)"

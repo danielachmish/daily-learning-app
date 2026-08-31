@@ -11,6 +11,8 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [registeringWebhook, setRegisteringWebhook] = useState(false);
+  const [webhookMessage, setWebhookMessage] = useState<{ text: string; isError: boolean } | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -41,6 +43,23 @@ export default function SettingsPage() {
       return;
     }
     setSaved(true);
+  }
+
+  async function handleRegisterSiruvWebhook() {
+    setRegisteringWebhook(true);
+    setWebhookMessage(null);
+    try {
+      const resp = await fetch('/api/nedarim/register-siruv-webhook', { method: 'POST' });
+      const data = await resp.json();
+      if (!resp.ok) {
+        setWebhookMessage({ text: data.error ?? 'הפעולה נכשלה.', isError: true });
+      } else {
+        setWebhookMessage({ text: 'ההתראות הופעלו בהצלחה — נדע מיד כשחיוב חודשי נכשל.', isError: false });
+      }
+    } catch {
+      setWebhookMessage({ text: 'שגיאת תקשורת.', isError: true });
+    }
+    setRegisteringWebhook(false);
   }
 
   return (
@@ -118,6 +137,30 @@ export default function SettingsPage() {
             {saving ? 'שומר…' : 'שמירה'}
           </button>
         </form>
+      )}
+
+      {!loading && settings.mosadId && settings.apiKey && (
+        <div className="mt-8 border-t border-line pt-6">
+          <h2 className="text-lg font-bold text-ink-900">התראות על תשלומים שנכשלו</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            נדרים פלוס שולחים עדכון מיידי רק על חיובים שהצליחו. כדי לדעת בזמן אמת גם כשחיוב חודשי של
+            הוראת קבע נכשל (למשל כרטיס שפג תוקפו), צריך לרשום כתובת נפרדת אצלם — לחיצה אחת כאן עושה
+            את זה.
+          </p>
+          <button
+            type="button"
+            onClick={handleRegisterSiruvWebhook}
+            disabled={registeringWebhook}
+            className="mt-3 w-fit rounded-full border border-teal-400 px-6 py-2 text-sm font-bold text-teal-600 disabled:opacity-60"
+          >
+            {registeringWebhook ? 'מפעיל…' : 'הפעלת התראות'}
+          </button>
+          {webhookMessage && (
+            <p className={`mt-2 text-sm ${webhookMessage.isError ? 'text-danger' : 'text-success'}`}>
+              {webhookMessage.text}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
