@@ -14,6 +14,7 @@ const NAV_LINKS = [
   { href: '/lessons', label: 'לימודים' },
   { href: '/dedications', label: 'הקדשות' },
   { href: '/settings', label: 'הגדרות' },
+  { href: '/legal', label: 'מסמכים משפטיים' },
   { href: '/reports', label: 'דוחות' },
 ];
 

@@ -17,9 +17,12 @@ import { useAuth } from '../src/hooks/useAuth';
 import { colors } from '../src/theme/colors';
 import { isRTL } from '../src/utils/rtl';
 
-// TODO: replace with the real published pages before release.
-const PRIVACY_POLICY_URL = 'https://dailylearning.app/privacy';
-const TERMS_URL = 'https://dailylearning.app/terms';
+// Public pages served by the admin panel (apps/admin/src/app/legal/*) —
+// no login required, since a visitor needs to be able to read these before
+// they even have an account. Content itself is edited by the org in the
+// admin panel's "מסמכים משפטיים" screen, not hardcoded here.
+const PRIVACY_POLICY_URL = 'https://daily-learning-admin-v2.netlify.app/legal/privacy';
+const TERMS_URL = 'https://daily-learning-admin-v2.netlify.app/legal/terms';
 
 export default function RegisterScreen() {
   const { session, loading: authLoading, signUp } = useAuth();
