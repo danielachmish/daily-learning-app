@@ -7,42 +7,26 @@ type CheckoutRequestBody =
   | { type: 'subscription'; planType: PlanType }
   | { type: 'dedication'; dedicationId: string };
 
-/** The `Value` object posted to Nedarim's iframe via postMessage — see app/payment.web.tsx. */
-export interface NedarimTransactionValue {
-  Mosad: string;
-  ApiValid: string;
-  PaymentType: 'HK' | 'Ragil';
-  Currency: string;
-  Amount: number;
-  Tashlumim: string;
-  Day?: number;
-  Zeout: string;
-  FirstName: string;
-  LastName: string;
-  Street: string;
-  City: string;
-  Phone: string;
-  Mail: string;
-  Groupe: string;
-  Comment: string;
-  CallBack: string;
-  Param2: string;
-}
-
 interface CreatePaymentResponse {
   iframeUrl?: string;
-  value?: NedarimTransactionValue;
+  nedarimTransactionId?: string;
   paymentId?: string;
   error?: string;
 }
 
 /**
  * Calls create-nedarim-payment and, on success, navigates to the payment
- * screen that actually embeds Nedarim Plus's secure iframe (see
+ * screen that embeds Nedarim Plus's secure iframe (see
  * app/payment.web.tsx). Kept as the single entry point every screen
  * already calls — its signature/return shape is unchanged from the old
  * Stripe-based version, so CreateDedicationScreen/MyDedicationsScreen/
  * paywall didn't need to change at all when the payment provider did.
+ *
+ * The edge function creates the transaction with Nedarim Plus server-side
+ * (real, validated amount) and returns only an opaque transaction ID —
+ * this app never holds the actual amount/payment fields, so there's
+ * nothing here for a technical user to tamper with before it reaches the
+ * iframe.
  */
 export async function startCheckout(body: CheckoutRequestBody): Promise<{ error: string | null }> {
   const { data, error } = await supabase.functions.invoke<CreatePaymentResponse>('create-nedarim-payment', {
@@ -52,7 +36,7 @@ export async function startCheckout(body: CheckoutRequestBody): Promise<{ error:
   if (error) {
     return { error: error.message };
   }
-  if (!data?.iframeUrl || !data?.value || !data?.paymentId) {
+  if (!data?.iframeUrl || !data?.nedarimTransactionId || !data?.paymentId) {
     return { error: data?.error ?? 'לא ניתן היה להתחיל את התשלום.' };
   }
 
@@ -61,7 +45,7 @@ export async function startCheckout(body: CheckoutRequestBody): Promise<{ error:
     params: {
       paymentId: data.paymentId,
       iframeUrl: data.iframeUrl,
-      value: JSON.stringify(data.value),
+      nedarimTransactionId: data.nedarimTransactionId,
     },
   });
 

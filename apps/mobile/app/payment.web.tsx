@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import type { NedarimTransactionValue } from '../src/services/payments';
 import { supabase } from '../src/services/supabase';
 import { colors } from '../src/theme/colors';
 
@@ -15,31 +14,28 @@ const MAX_POLLS = 45; // ~90 seconds
 const iframeStyle: React.CSSProperties = { flex: 1, width: '100%', border: 'none' };
 
 /**
- * Embeds Nedarim Plus's secure payment iframe. Confirmed against their own
- * sample integration file (matara.pro/nedarimplus/iframe/sample2.html —
- * real source code, not just their prose description of the flow):
+ * Embeds Nedarim Plus's secure payment iframe. Confirmed against their
+ * official API docs (org-account-gated PDF, obtained directly from
+ * Nedarim and read in full) — the "server-side transaction creation"
+ * flow: create-nedarim-payment already opened the transaction with
+ * Nedarim (real, server-validated amount) and handed this screen only an
+ * opaque transaction ID. Once the iframe signals it's ready (a `{ Name:
+ * 'Height' }` message, used here to size it too), this screen relays
+ * that ID via `{ Name: 'FinishTransaction', Value: <id> }` — no payment
+ * fields ever pass through this page. The iframe completes the card
+ * entry/charge itself and posts back `{ Name: 'TransactionResponse',
+ * Value: { Status, Message, ... } }`, Status 'OK' | 'Error'.
  *
- * - The iframe is loaded with NO payment data in its URL.
- * - Once it's ready, the parent posts
- *   `{ Name: 'FinishTransaction2', Value: {...} }` to it via postMessage
- *   — that's PostNedarim() in their sample. The card is entered inside
- *   the iframe itself, never on this page.
- * - The iframe posts progress/result back the same way: `{ Name:
- *   'Height', Value: <px> }` while rendering, and finally
- *   `{ Name: 'TransactionResponse', Value: { Status, Message, ... } }`
- *   where Status === 'Error' means it failed — that's ReadPostMessage()
- *   in their sample.
- *
- * That TransactionResponse is a real, confirmed signal (unlike a generic
- * "some message arrived"), but it's still only used for UX here — the
- * database is only ever updated by nedarim-callback (server-to-server,
- * IP-checked), so a spoofed postMessage can't fake a paid status.
+ * That response is a confirmed, real signal (not a guess) but is still
+ * only used for UX here — the database is only ever updated by
+ * nedarim-callback (server-to-server, IP-checked: per the docs, a
+ * spoofed postMessage from a malicious client cannot fake that).
  */
 export default function PaymentScreenWeb() {
-  const { paymentId, iframeUrl, value } = useLocalSearchParams<{
+  const { paymentId, iframeUrl, nedarimTransactionId } = useLocalSearchParams<{
     paymentId: string;
     iframeUrl: string;
-    value: string;
+    nedarimTransactionId: string;
   }>();
 
   const [phase, setPhase] = useState<Phase>('loading');
@@ -50,14 +46,12 @@ export default function PaymentScreenWeb() {
   const pollCountRef = useRef(0);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const transactionValue: NedarimTransactionValue | null = value ? JSON.parse(value) : null;
-
   function sendTransactionToIframe() {
     if (sentTransactionRef.current) return;
     const win = iframeRef.current?.contentWindow;
-    if (!win || !transactionValue) return;
+    if (!win || !nedarimTransactionId) return;
     sentTransactionRef.current = true;
-    win.postMessage({ Name: 'FinishTransaction2', Value: transactionValue }, '*');
+    win.postMessage({ Name: 'FinishTransaction', Value: nedarimTransactionId }, '*');
     setPhase('paying');
   }
 
@@ -96,15 +90,15 @@ export default function PaymentScreenWeb() {
         const px = parseInt(event.data.Value, 10);
         if (!Number.isNaN(px)) setIframeHeight(px + 15);
         // The iframe reporting its rendered height is also our best
-        // available "it's ready" signal — matches their sample, which
-        // uses this same event to hide its own loading spinner.
+        // available "it's ready" signal — matches Nedarim's own sample,
+        // which uses this same event to hide its loading spinner.
         sendTransactionToIframe();
       } else if (name === 'TransactionResponse') {
         const result = event.data.Value ?? {};
         if (result.Status === 'Error') {
           setErrorMessage(result.Message ?? 'התשלום לא הושלם.');
           setPhase('failed');
-        } else {
+        } else if (result.Status === 'OK') {
           startPolling();
         }
       }
@@ -124,7 +118,7 @@ export default function PaymentScreenWeb() {
     }
   }, [phase]);
 
-  if (!iframeUrl || !transactionValue || !paymentId) {
+  if (!iframeUrl || !nedarimTransactionId || !paymentId) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <Text style={styles.message}>חסרים פרטי תשלום. יש לחזור ולנסות שוב.</Text>

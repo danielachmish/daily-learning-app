@@ -1,21 +1,17 @@
 // Creates a Nedarim Plus payment (subscription or one-time dedication).
 //
-// Nedarim Plus's real integration model is an EMBEDDED IFRAME loaded with
-// no payment data in its URL — the parent page posts the actual payment
-// data to it via postMessage once loaded, and the donor enters card
-// details there (so the card never touches our server). Confirmed against
-// Nedarim's own sample integration file (matara.pro/nedarimplus/iframe/
-// sample2.html — a real code sample, not just their prose description):
-// the message posted to the iframe has the shape
-// `{ Name: 'FinishTransaction2', Value: { Mosad, ApiValid, ... } }`, and
-// the response posted back has the shape
-// `{ Name: 'TransactionResponse', Value: { Status, Message, ... } }`
-// where Status === 'Error' means failure. See app/payment.web.tsx for the
-// client side of this exchange. This function's job is only to hand the
-// client the Value fields to send — never the secret ApiPassword — after
-// validating the request server-side (real price from `settings`, real
-// dedication ownership/amount via RLS) so a client can't just embed
-// whatever amount it wants.
+// Uses their SERVER-SIDE transaction creation flow ("אייפרם: הקמת עסקה
+// בצד שרת" in their official docs — the full API documentation the org
+// obtained directly from Nedarim and shared with us), not the client-side
+// FinishTransaction2 flow: this server calls their CreateTransaction API
+// with the real amount (validated against `settings` prices or the
+// dedication's own amount — never trusting a client-supplied number),
+// gets back an opaque transaction ID, and hands ONLY that ID to the
+// client. The client then just relays that ID into the iframe
+// (postMessage({Name:'FinishTransaction', Value: ID})) — it never sees or
+// can tamper with the amount, unlike the client-side FinishTransaction2
+// flow where the browser holds the full payment payload and a technical
+// user could edit it in devtools before it's posted to the iframe.
 //
 // The actual payment confirmation is handled exclusively by the
 // nedarim-callback function (server-to-server, IP-checked) — exactly like
@@ -25,6 +21,9 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 import { corsHeaders } from '../_shared/cors.ts';
+
+const CREATE_TRANSACTION_URL =
+  'https://matara.pro/nedarimplus/V6/Files/WebServices/DebitIframe.aspx?Action=CreateTransaction';
 
 interface SubscriptionRequest {
   type: 'subscription';
@@ -41,6 +40,12 @@ type PaymentRequest = SubscriptionRequest | DedicationRequest;
 interface NedarimCredentials {
   mosad: string;
   apiValid: string;
+}
+
+interface CreateTransactionResult {
+  ok: boolean;
+  id?: string;
+  message?: string;
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -66,6 +71,27 @@ async function getNedarimCredentials(
 
   if (!mosad || !apiValid) return null;
   return { mosad, apiValid };
+}
+
+async function createNedarimTransaction(fields: Record<string, string>): Promise<CreateTransactionResult> {
+  const form = new URLSearchParams(fields);
+  const resp = await fetch(CREATE_TRANSACTION_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: form.toString(),
+  });
+
+  let data: { Status?: string; Message?: string; ID?: string };
+  try {
+    data = await resp.json();
+  } catch {
+    return { ok: false, message: 'Unexpected response from Nedarim Plus' };
+  }
+
+  if (data.Status !== 'OK' || !data.ID) {
+    return { ok: false, message: data.Message ?? 'Nedarim Plus rejected the transaction' };
+  }
+  return { ok: true, id: data.ID };
 }
 
 Deno.serve(async (req: Request) => {
@@ -125,13 +151,14 @@ Deno.serve(async (req: Request) => {
   }
 
   const callBackUrl = `${supabaseUrl}/functions/v1/nedarim-callback`;
-  // Nedarim charges standing orders on a fixed day-of-month (1-28, per
-  // their docs — no 29/30/31 to stay valid in every month). Using "today"
-  // (clamped) means the first real charge lands roughly a month from now,
-  // same as how the old Stripe subscription flow started billing.
-  const day = Math.min(28, Math.max(1, new Date().getDate()));
 
   try {
+    let paymentType: 'HK' | 'Ragil';
+    let amount: number;
+    let tashlumim: string;
+    let comment: string;
+    let dedicationId: string | null = null;
+
     if (body.type === 'subscription') {
       if (body.planType !== 'monthly' && body.planType !== 'yearly') {
         return jsonResponse({ error: 'planType must be "monthly" or "yearly"' }, 400);
@@ -146,53 +173,12 @@ Deno.serve(async (req: Request) => {
       if (priceError || !priceSetting) {
         return jsonResponse({ error: 'Subscription pricing is not configured.' }, 503);
       }
-      const amount = Number(priceSetting.value);
 
-      const { data: payment, error: paymentError } = await serviceClient
-        .from('payments')
-        .insert({
-          user_id: user.id,
-          payment_type: 'subscription',
-          related_id: null,
-          amount,
-          currency: 'ILS',
-          status: 'pending',
-          payment_provider: 'nedarim_plus',
-        })
-        .select('id')
-        .single();
-
-      if (paymentError || !payment) {
-        return jsonResponse({ error: 'Failed to start payment' }, 500);
-      }
-
-      return jsonResponse({
-        iframeUrl: 'https://matara.pro/nedarimplus/iframe?language=he',
-        value: {
-          Mosad: credentials.mosad,
-          ApiValid: credentials.apiValid,
-          PaymentType: 'HK',
-          Currency: '1',
-          Amount: amount,
-          Tashlumim: '', // blank = ongoing standing order, no fixed number of charges
-          Day: day,
-          Zeout: '',
-          FirstName: profile?.full_name ?? '',
-          LastName: '',
-          Street: '',
-          City: '',
-          Phone: profile?.phone ?? '',
-          Mail: profile?.email ?? '',
-          Groupe: '',
-          Comment: 'מנוי לימוד יומי',
-          CallBack: callBackUrl,
-          Param2: payment.id,
-        },
-        paymentId: payment.id,
-      });
-    }
-
-    if (body.type === 'dedication') {
+      paymentType = 'HK';
+      amount = Number(priceSetting.value);
+      tashlumim = ''; // blank = ongoing standing order, no fixed number of charges
+      comment = 'מנוי לימוד יומי';
+    } else if (body.type === 'dedication') {
       if (!body.dedicationId) {
         return jsonResponse({ error: 'Missing dedicationId' }, 400);
       }
@@ -210,50 +196,71 @@ Deno.serve(async (req: Request) => {
         return jsonResponse({ error: 'This dedication is not awaiting payment' }, 400);
       }
 
-      const { data: payment, error: paymentError } = await serviceClient
-        .from('payments')
-        .insert({
-          user_id: user.id,
-          payment_type: 'dedication',
-          related_id: dedication.id,
-          amount: dedication.amount,
-          currency: 'ILS',
-          status: 'pending',
-          payment_provider: 'nedarim_plus',
-        })
-        .select('id')
-        .single();
-
-      if (paymentError || !payment) {
-        return jsonResponse({ error: 'Failed to start payment' }, 500);
-      }
-
-      return jsonResponse({
-        iframeUrl: 'https://matara.pro/nedarimplus/iframe?language=he',
-        value: {
-          Mosad: credentials.mosad,
-          ApiValid: credentials.apiValid,
-          PaymentType: 'Ragil',
-          Currency: '1',
-          Amount: dedication.amount,
-          Tashlumim: '1',
-          Zeout: '',
-          FirstName: profile?.full_name ?? '',
-          LastName: '',
-          Street: '',
-          City: '',
-          Phone: profile?.phone ?? '',
-          Mail: profile?.email ?? '',
-          Groupe: '',
-          Comment: 'הקדשת לימוד יומי',
-          CallBack: callBackUrl,
-          Param2: payment.id,
-        },
-        paymentId: payment.id,
-      });
+      paymentType = 'Ragil';
+      amount = dedication.amount;
+      tashlumim = '1';
+      comment = 'הקדשת לימוד יומי';
+      dedicationId = dedication.id;
+    } else {
+      return jsonResponse({ error: 'Invalid request type' }, 400);
     }
 
-    return jsonResponse({ error: 'Invalid request type' }, 400);
+    const { data: payment, error: paymentError } = await serviceClient
+      .from('payments')
+      .insert({
+        user_id: user.id,
+        payment_type: body.type,
+        related_id: dedicationId,
+        amount,
+        currency: 'ILS',
+        status: 'pending',
+        payment_provider: 'nedarim_plus',
+      })
+      .select('id')
+      .single();
+
+    if (paymentError || !payment) {
+      return jsonResponse({ error: 'Failed to start payment' }, 500);
+    }
+
+    const result = await createNedarimTransaction({
+      Mosad: credentials.mosad,
+      ApiValid: credentials.apiValid,
+      PaymentType: paymentType,
+      Currency: '1',
+      Amount: String(amount),
+      Tashlumim: tashlumim,
+      Zeout: '',
+      FirstName: profile?.full_name ?? '',
+      LastName: '',
+      Street: '',
+      City: '',
+      Phone: profile?.phone ?? '',
+      Mail: profile?.email ?? '',
+      Groupe: '',
+      Comment: comment,
+      Param2: payment.id,
+      CallBack: callBackUrl,
+      // Recommended by Nedarim to prevent a duplicate charge if this
+      // request is retried after a network hiccup.
+      AjaxId: crypto.randomUUID(),
+    });
+
+    if (!result.ok) {
+      await serviceClient
+        .from('payments')
+        .update({ status: 'failed', raw_event: { createTransactionError: result.message } })
+        .eq('id', payment.id);
+      return jsonResponse({ error: result.message ?? 'לא ניתן היה לפתוח עסקה מול נדרים פלוס.' }, 502);
+    }
+
+    await serviceClient.from('payments').update({ provider_payment_id: result.id }).eq('id', payment.id);
+
+    return jsonResponse({
+      iframeUrl: 'https://matara.pro/nedarimplus/iframe?language=he',
+      nedarimTransactionId: result.id,
+      paymentId: payment.id,
+    });
   } catch (error) {
     console.error('create-nedarim-payment error:', error);
     return jsonResponse({ error: 'Failed to create payment' }, 500);
