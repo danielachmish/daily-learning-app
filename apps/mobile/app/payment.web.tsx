@@ -43,7 +43,13 @@ export default function PaymentScreenWeb() {
 
   const [phase, setPhase] = useState<Phase>('loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [iframeHeight, setIframeHeight] = useState(480);
+  // A generous floor, not just their reported Height: the iframe's first
+  // Height event can fire before its full form (payments-count selector,
+  // captcha, etc.) has finished laying out, which was rendering as a
+  // cramped sliver until a later, larger Height event arrived — if it ever
+  // did. Better to start roomy and only shrink once we're sure.
+  const MIN_IFRAME_HEIGHT = 620;
+  const [iframeHeight, setIframeHeight] = useState(MIN_IFRAME_HEIGHT);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const pollCountRef = useRef(0);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -94,7 +100,9 @@ export default function PaymentScreenWeb() {
       const name = event.data?.Name;
       if (name === 'Height') {
         const px = parseInt(event.data.Value, 10);
-        if (!Number.isNaN(px)) setIframeHeight(px + 15);
+        // Only grow, never shrink below the floor — an early, smaller
+        // report shouldn't clip a later, larger form.
+        if (!Number.isNaN(px)) setIframeHeight((prev) => Math.max(prev, px + 15));
         // The iframe reporting its height is also our "the card form
         // finished rendering" signal — only now is there anything for the
         // donor to actually fill in.
@@ -126,8 +134,14 @@ export default function PaymentScreenWeb() {
 
   function handleIframeLoad() {
     // Per their sample integration: request the height immediately after
-    // the iframe itself (not just our page) finishes loading.
+    // the iframe itself (not just our page) finishes loading. Also
+    // re-request a few times over the next couple seconds — their form can
+    // keep growing after the first report (e.g. a payments-count selector
+    // expanding) without necessarily pushing a new Height event on its own.
     postToIframe({ Name: 'GetHeight' });
+    [300, 800, 1500, 3000].forEach((delay) => {
+      setTimeout(() => postToIframe({ Name: 'GetHeight' }), delay);
+    });
   }
 
   if (!iframeUrl || !nedarimTransactionId || !paymentId) {
