@@ -241,6 +241,15 @@ Deno.serve(async (req: Request) => {
       Comment: comment,
       Param2: payment.id,
       CallBack: callBackUrl,
+      // Confirmed against their docs: in their SANDBOX institution (Mosad
+      // 0), the CallBack is silently not sent at all unless
+      // CallBackMailError is also present with a real address — this isn't
+      // optional there the way it is in production. Always sending it
+      // (their side only actually mails it on a delivery failure) costs
+      // nothing in production and fixes sandbox testing, where a payment
+      // would otherwise report success client-side while our server never
+      // hears about it and the payment sits stuck at "pending" forever.
+      CallBackMailError: profile?.email ?? '',
       // Recommended by Nedarim to prevent a duplicate charge if this
       // request is retried after a network hiccup.
       AjaxId: crypto.randomUUID(),
