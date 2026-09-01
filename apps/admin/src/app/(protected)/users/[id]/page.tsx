@@ -8,6 +8,7 @@ import {
   fetchUserById,
   setAccountStatus,
   setFreeAccess,
+  setRole,
   updateUserTrackAndLanguage,
 } from '../../../../services/users';
 import { createClient } from '../../../../services/supabase/client';
@@ -66,6 +67,26 @@ export default function UserDetailPage() {
     setUser((prev) => (prev ? { ...prev, free_access: !prev.free_access } : prev));
   }
 
+  async function handleToggleAdmin() {
+    if (!user) return;
+    const nextRole = user.role === 'admin' ? 'user' : 'admin';
+    const confirmMessage =
+      nextRole === 'admin'
+        ? `להפוך את ${user.full_name} למנהל/ת? תהיה לו/לה גישה מלאה לפאנל הניהול, כולל פרטי תשלומים.`
+        : `להסיר את הרשאת המנהל של ${user.full_name}?`;
+    if (!confirm(confirmMessage)) return;
+
+    setBusy(true);
+    const supabase = createClient();
+    const result = await setRole(supabase, id, nextRole);
+    setBusy(false);
+    if (result.error) {
+      alert(result.error);
+      return;
+    }
+    setUser((prev) => (prev ? { ...prev, role: nextRole } : prev));
+  }
+
   async function handleToggleBlocked() {
     if (!user) return;
     const nextStatus = user.account_status === 'blocked' ? 'active' : 'blocked';
@@ -100,6 +121,7 @@ export default function UserDetailPage() {
         <Row label="שיא רצף" value={String(user.best_streak)} />
         <Row label="סך ימי לימוד" value={String(user.total_completed_days)} />
         <Row label="נרשם בתאריך" value={new Date(user.created_at).toLocaleDateString('he-IL')} />
+        <Row label="הרשאה" value={user.role === 'admin' ? 'מנהל/ת' : 'משתמש/ת רגיל/ה'} />
       </dl>
 
       <div className="mb-6 flex gap-4">
@@ -150,6 +172,13 @@ export default function UserDetailPage() {
           }`}
         >
           {user.account_status === 'blocked' ? 'בטל חסימה' : 'חסום משתמש'}
+        </button>
+        <button
+          onClick={handleToggleAdmin}
+          disabled={busy}
+          className="rounded-full border border-slate-300 px-4 py-2 text-sm font-bold text-ink-700 disabled:opacity-50"
+        >
+          {user.role === 'admin' ? 'הסר הרשאת מנהל' : 'הפוך למנהל'}
         </button>
       </div>
     </div>

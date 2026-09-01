@@ -80,3 +80,13 @@ export async function setAccountStatus(
   const { error } = await supabase.rpc('admin_set_account_status', { p_user_id: id, p_account_status: status });
   return { error: error?.message ?? null };
 }
+
+/** Admin-only column, enforced via RPC (see docs — column grant excludes this from plain UPDATE). */
+export async function setRole(
+  supabase: SupabaseClient,
+  id: string,
+  role: 'user' | 'admin'
+): Promise<{ error: string | null }> {
+  const { error } = await supabase.rpc('admin_set_role', { p_user_id: id, p_role: role });
+  return { error: error?.message ?? null };
+}
