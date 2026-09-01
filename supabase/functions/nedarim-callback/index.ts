@@ -13,6 +13,14 @@
 // API documentation (obtained directly from the org): Status/Message/ID/
 // TransactionId/KevaId are exact. Status is 'OK' or 'Error' — anything
 // else would be unexpected, but treated as failure defensively.
+//
+// The payment is matched by a `paymentId` query param on the CallBack URL
+// itself (set in create-nedarim-payment), NOT by the documented Param2
+// field — confirmed live against their sandbox that Param2 comes back
+// EMPTY on a standing-order (HK) creation callback, even though it's sent
+// exactly as documented on the CreateTransaction request. The URL-embedded
+// id has no such dependency: they call the CallBack URL verbatim
+// regardless of what ends up in the JSON body.
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 
 import { settleDedicationPaid, settlePaymentFailure, settleSubscriptionPaid } from '../_shared/nedarimSettlement.ts';
@@ -54,10 +62,19 @@ Deno.serve(async (req: Request) => {
     return new Response('Invalid JSON', { status: 400 });
   }
 
-  const paymentId = stringField(body, 'Param2');
+  const paymentId = new URL(req.url).searchParams.get('paymentId');
   if (!paymentId) {
-    console.error('nedarim-callback: missing Param2, cannot match to a pending payment:', rawBody);
-    return new Response('Missing Param2', { status: 400 });
+    console.error('nedarim-callback: missing paymentId query param, cannot match to a pending payment:', rawBody);
+    return new Response('Missing paymentId', { status: 400 });
+  }
+
+  // Defense in depth: when Param2 does come through, it should agree with
+  // the URL-embedded id — a mismatch would mean something is very wrong
+  // (not treated as fatal on its own, since Param2 is the less reliable of
+  // the two, but worth knowing about).
+  const param2 = stringField(body, 'Param2');
+  if (param2 && param2 !== paymentId) {
+    console.error('nedarim-callback: Param2/paymentId mismatch', { paymentId, param2 });
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -71,7 +88,7 @@ Deno.serve(async (req: Request) => {
     .single();
 
   if (paymentLookupError || !payment) {
-    console.error('nedarim-callback: no payment found for Param2:', paymentId);
+    console.error('nedarim-callback: no payment found for paymentId:', paymentId);
     return new Response('Unknown payment', { status: 404 });
   }
 
@@ -96,7 +113,13 @@ Deno.serve(async (req: Request) => {
 
   const success = body.Status !== 'Error';
   const transactionId = stringField(body, 'ID') ?? stringField(body, 'TransactionId');
-  const kevaId = stringField(body, 'KevaId');
+  // Confirmed live: a standing-order CREATION callback (TransactionType
+  // "הקמת הו"ק") carries the new Keva's id in `ID` directly and has no
+  // separate `KevaId` key at all — that key only shows up on later
+  // callbacks for an EXISTING standing order (a recurring monthly charge,
+  // or a decline). Since every 'subscription' payment here is HK, falling
+  // back to the transaction id itself for that case is correct, not a guess.
+  const kevaId = stringField(body, 'KevaId') ?? (payment.payment_type === 'subscription' ? transactionId : null);
   const today = new Date().toISOString().slice(0, 10);
 
   try {

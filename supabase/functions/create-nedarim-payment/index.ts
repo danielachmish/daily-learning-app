@@ -150,8 +150,6 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  const callBackUrl = `${supabaseUrl}/functions/v1/nedarim-callback`;
-
   try {
     let paymentType: 'HK' | 'Ragil';
     let amount: number;
@@ -222,6 +220,18 @@ Deno.serve(async (req: Request) => {
     if (paymentError || !payment) {
       return jsonResponse({ error: 'Failed to start payment' }, 500);
     }
+
+    // Tested live against their sandbox: Param2 comes back EMPTY on the
+    // CallBack for a standing-order (HK) setup, even though it's sent on
+    // the CreateTransaction request exactly as documented — an
+    // undocumented gap specific to that flow, not a mistake in what we
+    // send. Rather than depend on a callback JSON field they don't
+    // reliably echo, this embeds our own payment id directly in the
+    // CallBack URL itself, which they call verbatim regardless — no
+    // dependency on any field in the JSON body at all. Param2 is still
+    // sent below as a defense-in-depth cross-check for whenever it does
+    // come through.
+    const callBackUrl = `${supabaseUrl}/functions/v1/nedarim-callback?paymentId=${payment.id}`;
 
     const result = await createNedarimTransaction({
       Mosad: credentials.mosad,
