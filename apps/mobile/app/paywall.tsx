@@ -1,3 +1,4 @@
+import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,7 +11,17 @@ import { colors } from '../src/theme/colors';
 import { isRTL } from '../src/utils/rtl';
 
 export default function PaywallScreen() {
-  const { profile, signOut } = useAuth();
+  const { session, profile, signOut } = useAuth();
+
+  // Without this, pressing "התנתק/י" below does sign the user out (their
+  // session really is cleared), but this screen has no way to know it
+  // should leave — Expo Router doesn't re-route away from whatever screen
+  // happens to be mounted just because auth state changed elsewhere. It
+  // just sits there looking exactly the same, which reads as "the button
+  // doesn't work" even though it did.
+  if (!session) {
+    return <Redirect href="/login" />;
+  }
   const [monthlyPrice, setMonthlyPrice] = useState<string | null>(null);
   const [yearlyPrice, setYearlyPrice] = useState<string | null>(null);
   const [loadingPrices, setLoadingPrices] = useState(true);

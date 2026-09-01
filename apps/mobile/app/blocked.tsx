@@ -1,3 +1,4 @@
+import { Redirect } from 'expo-router';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -6,8 +7,15 @@ import { colors } from '../src/theme/colors';
 import { isRTL } from '../src/utils/rtl';
 
 export default function BlockedScreen() {
-  const { profile, signOut } = useAuth();
+  const { session, profile, signOut } = useAuth();
   const rtl = isRTL(profile?.language ?? 'he');
+
+  // Same fix as paywall.tsx: signOut() really does clear the session, but
+  // this screen otherwise has no way to know to leave — it would just sit
+  // there unchanged, looking like the button did nothing.
+  if (!session) {
+    return <Redirect href="/login" />;
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
