@@ -3,6 +3,7 @@ import { useEffect, type ReactNode } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AppAlertHost } from '../src/components/AppAlertHost';
 import { AuthProvider, useAuth } from '../src/hooks/useAuth';
 import { colors } from '../src/theme/colors';
 import { syncAppDirection } from '../src/utils/appDirection';
@@ -41,6 +42,10 @@ export default function RootLayout() {
               <Stack screenOptions={{ headerShown: false }} />
             </View>
           </View>
+          {/* Mounted once here so notify()/confirmAsync() (src/utils/alerts.ts)
+              work from any screen or service, on-brand instead of the
+              browser's/OS's own generic alert chrome. */}
+          <AppAlertHost />
         </DirectionSync>
       </AuthProvider>
     </SafeAreaProvider>

@@ -45,7 +45,10 @@ export function MyDedicationsScreen({ profile }: Props) {
   }
 
   async function handleDelete(dedication: Dedication) {
-    const confirmed = await confirmAsync('מחיקת הקדשה', 'למחוק את ההקדשה הזו? לא ניתן לשחזר.');
+    const confirmed = await confirmAsync('מחיקת הקדשה', 'למחוק את ההקדשה הזו? לא ניתן לשחזר.', {
+      confirmLabel: 'מחק/י',
+      destructive: true,
+    });
     if (!confirmed) return;
 
     setBusyId(dedication.id);

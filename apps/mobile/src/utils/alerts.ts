@@ -1,35 +1,56 @@
-import { Alert, Platform } from 'react-native';
-
 /**
- * `Alert.alert()` from react-native is a silent no-op on web (react-native-
- * web doesn't implement it) — any screen shared between native and web that
- * uses it directly just does nothing when tapped there: no dialog, no error
- * shown, no confirmation, and (worse) any code inside an Alert.alert button
- * callback simply never runs. app/payment.web.tsx already worked around
- * this in its own web-only file by calling the browser's confirm()/alert()
- * directly; these two helpers do the same for screens that are NOT split
- * into separate native/web files (e.g. MyDedicationsScreen, paywall.tsx),
- * so they behave correctly on both platforms from one code path.
+ * Imperative notify()/confirmAsync() calls backed by a custom in-app dialog
+ * (see src/components/AppAlertHost.tsx, mounted once at the app root) —
+ * NOT the browser's window.alert()/confirm() and NOT React Native's
+ * Alert.alert(). Those were each tried first and both had real problems:
+ * Alert.alert() is a silent no-op on react-native-web (nothing shows, and
+ * any logic inside its button callbacks never runs), and the browser's
+ * native confirm()/alert() do work but look like generic browser chrome —
+ * jarringly inconsistent with the app's own design. This gives one
+ * cross-platform, on-brand dialog instead.
+ *
+ * Kept as plain importable functions (not a hook) so any screen or service
+ * can call them without needing to be inside a component that consumes a
+ * context — AppAlertHost registers itself here via `registerDialogHandler`
+ * once it mounts.
  */
 
-/** Shows a message. Resolves once dismissed (native) or immediately (web, synchronous alert()). */
-export function notify(title: string, message?: string): void {
-  if (Platform.OS === 'web') {
-    window.alert(message ? `${title}\n\n${message}` : title);
-    return;
-  }
-  Alert.alert(title, message);
+export interface ConfirmOptions {
+  confirmLabel?: string;
+  cancelLabel?: string;
+  /** Styles the confirm button as a destructive (red) action — e.g. deleting something. */
+  destructive?: boolean;
 }
 
-/** Resolves true if confirmed, false if cancelled — works the same on native and web. */
-export function confirmAsync(title: string, message?: string): Promise<boolean> {
-  if (Platform.OS === 'web') {
-    return Promise.resolve(window.confirm(message ? `${title}\n\n${message}` : title));
-  }
-  return new Promise((resolve) => {
-    Alert.alert(title, message, [
-      { text: 'ביטול', style: 'cancel', onPress: () => resolve(false) },
-      { text: 'אישור', style: 'destructive', onPress: () => resolve(true) },
-    ]);
+export interface DialogRequest {
+  title: string;
+  message?: string;
+  confirmLabel: string;
+  cancelLabel?: string; // omitted => single-button "notify" dialog
+  destructive?: boolean;
+}
+
+type DialogHandler = (request: DialogRequest) => Promise<boolean>;
+
+let handler: DialogHandler | null = null;
+
+/** Called by AppAlertHost only — do not call this from screen code. */
+export function registerDialogHandler(next: DialogHandler | null): void {
+  handler = next;
+}
+
+export async function notify(title: string, message?: string): Promise<void> {
+  if (!handler) return;
+  await handler({ title, message, confirmLabel: 'אישור' });
+}
+
+export async function confirmAsync(title: string, message?: string, options?: ConfirmOptions): Promise<boolean> {
+  if (!handler) return false;
+  return handler({
+    title,
+    message,
+    confirmLabel: options?.confirmLabel ?? 'אישור',
+    cancelLabel: options?.cancelLabel ?? 'ביטול',
+    destructive: options?.destructive,
   });
 }
