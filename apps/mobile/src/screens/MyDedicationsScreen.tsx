@@ -92,7 +92,13 @@ export function MyDedicationsScreen({ profile }: Props) {
             const busy = busyId === dedication.id;
             return (
               <View key={dedication.id} style={styles.card}>
-                <Text style={[styles.cardDate, rtl && styles.textRTL]}>
+                {/* Deliberately NOT RTL here even in a Hebrew layout: two LTR
+                    ISO dates joined by a dash, inside an RTL-direction text
+                    node, get visually reordered by the bidi algorithm (the
+                    same bug class that flips phone numbers in RTL UIs) even
+                    though the underlying string is correct. Dates read
+                    left-to-right regardless of interface language. */}
+                <Text style={styles.cardDate}>
                   {dedication.dedication_date === dedication.end_date
                     ? dedication.dedication_date
                     : `${dedication.dedication_date} – ${dedication.end_date}`}
