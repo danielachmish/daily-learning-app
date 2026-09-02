@@ -385,12 +385,6 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
-[functions.payment-webhook]
-# Stripe calls this directly and cannot supply a Supabase JWT — the request
-# is authenticated instead by verifying the Stripe-Signature header inside
-# the function itself (see supabase/functions/payment-webhook/index.ts).
-verify_jwt = false
-
 [functions.nedarim-callback]
 # Nedarim Plus's servers call this directly and cannot supply a Supabase
 # JWT — authenticated instead by checking the caller's IP against their
@@ -413,12 +407,6 @@ verify_jwt = false
 # Called by a pg_cron job via net.http_post — authenticated via its own
 # CRON_SECRET check inside the function, same pattern as send-reminder-pushes.
 verify_jwt = false
-
-[edge_runtime.secrets]
-STRIPE_SECRET_KEY = "env(STRIPE_SECRET_KEY)"
-STRIPE_WEBHOOK_SECRET = "env(STRIPE_WEBHOOK_SECRET)"
-STRIPE_PRICE_MONTHLY = "env(STRIPE_PRICE_MONTHLY)"
-STRIPE_PRICE_YEARLY = "env(STRIPE_PRICE_YEARLY)"
 
 [analytics]
 # Disabled: this local Logflare container has repeatedly crashed/gone
