@@ -5,6 +5,7 @@ export * from './Lesson';
 export * from './LessonImage';
 export * from './LearningProgress';
 export * from './Dedication';
+export * from './DedicationDurationOption';
 export * from './Payment';
 export * from './DailyLessonStats';
 export * from './DailyRevenueStats';

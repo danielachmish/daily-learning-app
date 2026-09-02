@@ -1,20 +1,21 @@
-import type { Dedication, DedicationType } from '@daily-learning/shared';
+import type { Dedication, DedicationDurationOption, DedicationType } from '@daily-learning/shared';
 
 import { supabase } from './supabase';
 import { toDateOnlyString } from '../utils/date';
 
 const DEDICATION_COLUMNS =
-  'id, user_id, dedication_date, type, dedication_text, donor_name, amount, payment_status, approval_status, payment_provider, provider_payment_id, created_at, approved_at';
+  'id, user_id, dedication_date, end_date, duration_option_id, type, dedication_text, donor_name, amount, payment_status, approval_status, payment_provider, provider_payment_id, created_at, approved_at';
 
-/** Current dedication price from settings (public, admin-editable). */
-export async function fetchDedicationPrice(): Promise<{ price: number | null; error: string | null }> {
-  const { data, error } = await supabase.from('settings').select('value').eq('key', 'dedication_price').maybeSingle();
+/** Admin-managed duration/price tiers — replaces the old single flat dedication_price setting. */
+export async function fetchDurationOptions(): Promise<{ options: DedicationDurationOption[]; error: string | null }> {
+  const { data, error } = await supabase
+    .from('dedication_duration_options')
+    .select('id, label, duration_days, price, sort_order, active, created_at, updated_at')
+    .eq('active', true)
+    .order('sort_order', { ascending: true });
 
-  if (error) return { price: null, error: error.message };
-  if (!data) return { price: null, error: null };
-
-  const parsed = Number(data.value);
-  return { price: Number.isFinite(parsed) ? parsed : null, error: null };
+  if (error) return { options: [], error: error.message };
+  return { options: (data as DedicationDurationOption[]) ?? [], error: null };
 }
 
 /** Efficient count-only query — used for the "X מקדישים היום" line on the lesson screen. */
@@ -24,7 +25,8 @@ export async function fetchTodayDedicationsCount(): Promise<{ count: number; err
   const { count, error } = await supabase
     .from('dedications')
     .select('id', { count: 'exact', head: true })
-    .eq('dedication_date', today)
+    .lte('dedication_date', today)
+    .gte('end_date', today)
     .eq('payment_status', 'paid')
     .eq('approval_status', 'approved');
 
@@ -32,14 +34,15 @@ export async function fetchTodayDedicationsCount(): Promise<{ count: number; err
   return { count: count ?? 0, error: null };
 }
 
-/** Only paid + approved dedications are ever shown publicly. */
+/** Only paid + approved dedications covering today are ever shown publicly. */
 export async function fetchTodayDedications(): Promise<{ dedications: Dedication[]; error: string | null }> {
   const today = toDateOnlyString(new Date());
 
   const { data, error } = await supabase
     .from('dedications')
     .select(DEDICATION_COLUMNS)
-    .eq('dedication_date', today)
+    .lte('dedication_date', today)
+    .gte('end_date', today)
     .eq('payment_status', 'paid')
     .eq('approval_status', 'approved')
     .order('created_at', { ascending: true });
@@ -62,34 +65,30 @@ export async function fetchMyDedications(
 }
 
 export interface CreateDedicationInput {
-  userId: string;
   dedicationDate: string;
+  durationOptionId: string;
   type: DedicationType;
   dedicationText: string;
   donorName: string;
-  amount: number;
 }
 
 /**
- * Creates a dedication. payment_status/approval_status are never sent from
- * the client — they fall through to the DB defaults ('pending'/'pending'),
- * so there is no field here a client could set to fake a paid/approved state.
+ * Creates a dedication via the create_dedication() RPC — NOT a plain
+ * insert. The price is looked up server-side from the chosen duration
+ * option; the client never gets to say what the amount is (a plain insert
+ * used to let it set `amount` directly, a real price-tampering gap).
+ * payment_status/approval_status still fall through to their DB defaults.
  */
 export async function createDedication(
   input: CreateDedicationInput
 ): Promise<{ dedication: Dedication | null; error: string | null }> {
-  const { data, error } = await supabase
-    .from('dedications')
-    .insert({
-      user_id: input.userId,
-      dedication_date: input.dedicationDate,
-      type: input.type,
-      dedication_text: input.dedicationText,
-      donor_name: input.donorName || null,
-      amount: input.amount,
-    })
-    .select(DEDICATION_COLUMNS)
-    .single();
+  const { data, error } = await supabase.rpc('create_dedication', {
+    p_dedication_date: input.dedicationDate,
+    p_duration_option_id: input.durationOptionId,
+    p_type: input.type,
+    p_dedication_text: input.dedicationText,
+    p_donor_name: input.donorName,
+  });
 
   if (error) return { dedication: null, error: error.message };
   return { dedication: data as Dedication, error: null };

@@ -13,6 +13,8 @@ const NAV_LINKS = [
   { href: '/subscriptions', label: 'מנויים' },
   { href: '/lessons', label: 'לימודים' },
   { href: '/dedications', label: 'הקדשות' },
+  { href: '/pricing', label: 'מחירי מנוי' },
+  { href: '/dedication-options', label: 'אפשרויות הקדשה' },
   { href: '/settings', label: 'הגדרות' },
   { href: '/legal', label: 'מסמכים משפטיים' },
   { href: '/reports', label: 'דוחות' },

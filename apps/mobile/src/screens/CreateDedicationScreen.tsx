@@ -1,4 +1,4 @@
-import type { DedicationType, UserProfile } from '@daily-learning/shared';
+import type { DedicationDurationOption, DedicationType, UserProfile } from '@daily-learning/shared';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { createDedication, fetchDedicationPrice } from '../services/dedications';
+import { createDedication, fetchDurationOptions } from '../services/dedications';
 import { startCheckout } from '../services/payments';
 import { colors } from '../theme/colors';
 import { addDays, toDateOnlyString } from '../utils/date';
@@ -34,8 +34,9 @@ export function CreateDedicationScreen({ profile }: Props) {
   const [dedicationText, setDedicationText] = useState('');
   const [donorName, setDonorName] = useState('');
 
-  const [price, setPrice] = useState<number | null>(null);
-  const [priceLoading, setPriceLoading] = useState(true);
+  const [options, setOptions] = useState<DedicationDurationOption[]>([]);
+  const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
+  const [optionsLoading, setOptionsLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createdDedicationId, setCreatedDedicationId] = useState<string | null>(null);
@@ -44,11 +45,12 @@ export function CreateDedicationScreen({ profile }: Props) {
 
   useEffect(() => {
     let isMounted = true;
-    fetchDedicationPrice().then(({ price: fetchedPrice, error: priceError }) => {
+    fetchDurationOptions().then(({ options: fetchedOptions, error: optionsError }) => {
       if (!isMounted) return;
-      if (priceError) setError(priceError);
-      setPrice(fetchedPrice);
-      setPriceLoading(false);
+      if (optionsError) setError(optionsError);
+      setOptions(fetchedOptions);
+      setSelectedOptionId((prev) => prev ?? fetchedOptions[0]?.id ?? null);
+      setOptionsLoading(false);
     });
     return () => {
       isMounted = false;
@@ -62,19 +64,18 @@ export function CreateDedicationScreen({ profile }: Props) {
       setError('נא להזין נוסח הקדשה.');
       return;
     }
-    if (price === null) {
-      setError('לא ניתן לטעון את מחיר ההקדשה כרגע.');
+    if (!selectedOptionId) {
+      setError('נא לבחור למשך כמה זמן ההקדשה.');
       return;
     }
 
     setSubmitting(true);
     const { dedication, error: createError } = await createDedication({
-      userId: profile.id,
       dedicationDate,
+      durationOptionId: selectedOptionId,
       type,
       dedicationText: dedicationText.trim(),
       donorName: donorName.trim(),
-      amount: price,
     });
     setSubmitting(false);
 
@@ -135,6 +136,29 @@ export function CreateDedicationScreen({ profile }: Props) {
         </Pressable>
       </View>
 
+      <Text style={[styles.label, rtl && styles.textRTL]}>למשך כמה זמן</Text>
+      {optionsLoading ? (
+        <Text style={[styles.priceText, rtl && styles.textRTL]}>טוען אפשרויות…</Text>
+      ) : options.length === 0 ? (
+        <Text style={[styles.errorText, rtl && styles.textRTL]}>אין כרגע אפשרויות הקדשה זמינות.</Text>
+      ) : (
+        <View style={styles.typeList}>
+          {options.map((option) => (
+            <Pressable
+              key={option.id}
+              style={[styles.typeRow, selectedOptionId === option.id && styles.typeRowSelected]}
+              onPress={() => setSelectedOptionId(option.id)}
+            >
+              <Text
+                style={[styles.typeRowText, selectedOptionId === option.id && styles.typeRowTextSelected]}
+              >
+                {option.label} — ₪{option.price}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
       <Text style={[styles.label, rtl && styles.textRTL]}>סוג ההקדשה</Text>
       <View style={styles.typeList}>
         {DEDICATION_TYPES.map((t) => (
@@ -168,16 +192,12 @@ export function CreateDedicationScreen({ profile }: Props) {
         editable={!submitting}
       />
 
-      <Text style={[styles.priceText, rtl && styles.textRTL]}>
-        {priceLoading ? 'טוען מחיר…' : price !== null ? `עלות ההקדשה: ₪${price}` : 'לא ניתן לטעון מחיר'}
-      </Text>
-
       {error && <Text style={styles.errorText}>{error}</Text>}
 
       <Pressable
         style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
         onPress={handleSubmit}
-        disabled={submitting || priceLoading}
+        disabled={submitting || optionsLoading || options.length === 0}
       >
         {submitting ? <ActivityIndicator color={colors.onTeal} /> : <Text style={styles.submitButtonText}>הקדש/י</Text>}
       </Pressable>

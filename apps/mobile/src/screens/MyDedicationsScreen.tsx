@@ -92,7 +92,11 @@ export function MyDedicationsScreen({ profile }: Props) {
             const busy = busyId === dedication.id;
             return (
               <View key={dedication.id} style={styles.card}>
-                <Text style={[styles.cardDate, rtl && styles.textRTL]}>{dedication.dedication_date}</Text>
+                <Text style={[styles.cardDate, rtl && styles.textRTL]}>
+                  {dedication.dedication_date === dedication.end_date
+                    ? dedication.dedication_date
+                    : `${dedication.dedication_date} – ${dedication.end_date}`}
+                </Text>
                 <Text style={[styles.cardType, rtl && styles.textRTL]}>
                   {DEDICATION_TYPE_LABELS[dedication.type]}
                 </Text>
