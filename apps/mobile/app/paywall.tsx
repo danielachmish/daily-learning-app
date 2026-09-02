@@ -1,6 +1,6 @@
 import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LogoLockup } from '../src/components/LogoLockup';
@@ -8,20 +8,11 @@ import { useAuth } from '../src/hooks/useAuth';
 import { startCheckout } from '../src/services/payments';
 import { supabase } from '../src/services/supabase';
 import { colors } from '../src/theme/colors';
+import { notify } from '../src/utils/alerts';
 import { isRTL } from '../src/utils/rtl';
 
 export default function PaywallScreen() {
   const { session, profile, signOut } = useAuth();
-
-  // Without this, pressing "התנתק/י" below does sign the user out (their
-  // session really is cleared), but this screen has no way to know it
-  // should leave — Expo Router doesn't re-route away from whatever screen
-  // happens to be mounted just because auth state changed elsewhere. It
-  // just sits there looking exactly the same, which reads as "the button
-  // doesn't work" even though it did.
-  if (!session) {
-    return <Redirect href="/login" />;
-  }
   const [monthlyPrice, setMonthlyPrice] = useState<string | null>(null);
   const [yearlyPrice, setYearlyPrice] = useState<string | null>(null);
   const [loadingPrices, setLoadingPrices] = useState(true);
@@ -64,14 +55,24 @@ export default function PaywallScreen() {
     setCheckingOutPlan(null);
 
     if (error) {
-      Alert.alert('שגיאה', error);
+      notify('שגיאה', error);
       return;
     }
 
-    Alert.alert(
+    notify(
       'התשלום בעיבוד',
       'אם התשלום הצליח, הגישה תיפתח בעוד רגע. אפשר לחזור למסך הראשי ולנסות שוב אם התוכן עדיין חסום.'
     );
+  }
+
+  // Placed after all hooks above, never before — signOut() really does
+  // clear the session (this screen otherwise has no way to know to leave,
+  // since Expo Router doesn't re-route away from whatever screen happens
+  // to be mounted just because auth state changed elsewhere), but an early
+  // return before a hook call is a Rules-of-Hooks violation: React would
+  // call fewer hooks on this render than the last one and throw.
+  if (!session) {
+    return <Redirect href="/login" />;
   }
 
   return (

@@ -1,13 +1,14 @@
 import type { Dedication, UserProfile } from '@daily-learning/shared';
 import { Link } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { deleteDedication, fetchMyDedications } from '../services/dedications';
 import { startCheckout } from '../services/payments';
 import { colors } from '../theme/colors';
 import { APPROVAL_STATUS_LABELS, DEDICATION_TYPE_LABELS, PAYMENT_STATUS_LABELS } from '../utils/dedicationLabels';
+import { confirmAsync, notify } from '../utils/alerts';
 import { isRTL } from '../utils/rtl';
 
 interface Props {
@@ -39,28 +40,22 @@ export function MyDedicationsScreen({ profile }: Props) {
     const { error: payError } = await startCheckout({ type: 'dedication', dedicationId });
     setBusyId(null);
     if (payError) {
-      Alert.alert('שגיאה', payError);
+      notify('שגיאה', payError);
     }
   }
 
-  function handleDelete(dedication: Dedication) {
-    Alert.alert('מחיקת הקדשה', 'למחוק את ההקדשה הזו? לא ניתן לשחזר.', [
-      { text: 'ביטול', style: 'cancel' },
-      {
-        text: 'מחק/י',
-        style: 'destructive',
-        onPress: async () => {
-          setBusyId(dedication.id);
-          const { error: deleteError } = await deleteDedication(dedication.id);
-          setBusyId(null);
-          if (deleteError) {
-            Alert.alert('שגיאה', deleteError);
-            return;
-          }
-          setDedications((prev) => prev.filter((d) => d.id !== dedication.id));
-        },
-      },
-    ]);
+  async function handleDelete(dedication: Dedication) {
+    const confirmed = await confirmAsync('מחיקת הקדשה', 'למחוק את ההקדשה הזו? לא ניתן לשחזר.');
+    if (!confirmed) return;
+
+    setBusyId(dedication.id);
+    const { error: deleteError } = await deleteDedication(dedication.id);
+    setBusyId(null);
+    if (deleteError) {
+      notify('שגיאה', deleteError);
+      return;
+    }
+    setDedications((prev) => prev.filter((d) => d.id !== dedication.id));
   }
 
   return (
