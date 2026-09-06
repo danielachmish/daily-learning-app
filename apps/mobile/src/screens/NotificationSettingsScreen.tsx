@@ -113,14 +113,14 @@ export function NotificationSettingsScreen({ profile }: Props) {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.centerFill} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.centerFill} edges={['bottom']}>
         <ActivityIndicator size="large" />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <Text style={[styles.title, rtl && styles.textRTL]}>תזכורת יומית</Text>
 
       <View style={styles.row}>

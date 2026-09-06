@@ -102,7 +102,7 @@ export function CreateDedicationScreen({ profile }: Props) {
 
   if (createdDedicationId) {
     return (
-      <SafeAreaView style={styles.centerFill} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.centerFill} edges={['bottom']}>
         <Text style={[styles.successText, rtl && styles.textRTL]}>
           ההקדשה נשמרה! היא תופיע לאחר תשלום ואישור מנהל.
         </Text>
@@ -121,7 +121,7 @@ export function CreateDedicationScreen({ profile }: Props) {
   }
 
   return (
-    <SafeAreaView style={styles.flexFill} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.flexFill} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={[styles.title, rtl && styles.textRTL]}>הקדשת לימוד</Text>
 

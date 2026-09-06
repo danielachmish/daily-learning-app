@@ -62,7 +62,7 @@ export function MyDedicationsScreen({ profile }: Props) {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.headerRow}>
         <Text style={[styles.title, rtl && styles.textRTL]}>ההקדשות שלי</Text>
         <Link href="/dedications/new" style={styles.newLink}>

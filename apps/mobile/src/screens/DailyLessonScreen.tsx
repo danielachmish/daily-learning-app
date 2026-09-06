@@ -14,7 +14,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RemoteImage } from '../components/RemoteImage';
-import { StreakBadge } from '../components/StreakBadge';
 import {
   completeLesson,
   fetchCompletionStatus,
@@ -239,8 +238,6 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
               )}
             </Pressable>
           </View>
-
-          <StreakBadge days={profile.current_streak} />
 
           <Pressable onPress={() => Linking.openURL('https://danielachmish.com')}>
             <Text style={styles.creditText}>{'נבנה ע"י דניאל לחמיש'}</Text>

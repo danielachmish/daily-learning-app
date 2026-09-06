@@ -90,7 +90,7 @@ export function CalendarScreen({ profile }: Props) {
   for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.header}>
         <Pressable onPress={() => goToMonth(-1)} style={styles.navButton}>
           <Text style={styles.navButtonText}>‹</Text>

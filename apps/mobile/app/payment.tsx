@@ -14,7 +14,7 @@ import { colors } from '../src/theme/colors';
  */
 export default function PaymentScreenNativeFallback() {
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.content}>
         <Text style={styles.title}>התשלום זמין כרגע בגרסת האתר</Text>
         <Text style={styles.body}>

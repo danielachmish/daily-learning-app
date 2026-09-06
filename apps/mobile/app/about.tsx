@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -13,18 +12,16 @@ import { isRTL } from '../src/utils/rtl';
  * signed up would have no way back to them. Also required in practice:
  * Israeli accessibility regulations expect the accessibility statement to
  * stay reachable from within the service itself, not just at sign-up.
+ *
+ * No manual back link here — the shared native header (app/_layout.tsx)
+ * already puts one above every pushed screen.
  */
 export default function AboutScreen() {
-  const router = useRouter();
   const { profile } = useAuth();
   const rtl = isRTL(profile?.language ?? 'he');
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <Pressable onPress={() => router.back()}>
-        <Text style={styles.backLink}>{rtl ? '‹ חזרה' : 'Back'}</Text>
-      </Pressable>
-
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <Text style={[styles.title, rtl && styles.textRTL]}>אודות ומידע משפטי</Text>
 
       <View style={styles.linkList}>
@@ -52,12 +49,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.paper0,
     padding: 20,
     gap: 8,
-  },
-  backLink: {
-    color: colors.teal600,
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
   },
   title: {
     fontSize: 20,

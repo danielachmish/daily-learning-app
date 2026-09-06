@@ -39,7 +39,39 @@ export default function RootLayout() {
               is untouched (maxWidth: undefined there, so it's a no-op). */}
           <View style={styles.outer}>
             <View style={styles.frame}>
-              <Stack screenOptions={{ headerShown: false }} />
+              {/* Every screen used to hide the header entirely and build its
+                  own top row from scratch — fine on Android (the hardware/
+                  gesture back button always works), but left iOS and web
+                  users with no way back off a screen like calendar,
+                  notification settings, or "about" except closing the app.
+                  A shared native header gives every pushed screen a back
+                  arrow for free (React Navigation only shows one when
+                  there's actually a previous screen to return to, and
+                  already flips its side/direction under RTL — see
+                  syncAppDirection above). Title text is deliberately empty:
+                  screens already show their own heading inline below it. */}
+              <Stack
+                screenOptions={{
+                  headerShown: true,
+                  headerTitle: '',
+                  headerBackTitle: '',
+                  headerBackButtonDisplayMode: 'minimal',
+                  headerTintColor: colors.teal600,
+                  headerStyle: { backgroundColor: colors.paper0 },
+                  headerShadowVisible: false,
+                }}
+              >
+                {/* These are the app's entry/gate screens — reached via
+                    router.replace (not pushed), so there's never actually a
+                    previous screen to go back to, but without this they'd
+                    still show an empty, pointless header bar above their
+                    own centered content. */}
+                <Stack.Screen name="index" options={{ headerShown: false }} />
+                <Stack.Screen name="login" options={{ headerShown: false }} />
+                <Stack.Screen name="register" options={{ headerShown: false }} />
+                <Stack.Screen name="paywall" options={{ headerShown: false }} />
+                <Stack.Screen name="blocked" options={{ headerShown: false }} />
+              </Stack>
             </View>
           </View>
           {/* Mounted once here so notify()/confirmAsync() (src/utils/alerts.ts)

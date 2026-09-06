@@ -146,14 +146,14 @@ export default function PaymentScreenWeb() {
 
   if (!iframeUrl || !nedarimTransactionId || !paymentId) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.container} edges={['bottom']}>
         <Text style={styles.message}>חסרים פרטי תשלום. יש לחזור ולנסות שוב.</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       {(phase === 'loading' || phase === 'ready' || phase === 'paying') && (
         <>
           <View style={styles.header}>
