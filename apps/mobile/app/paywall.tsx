@@ -81,9 +81,14 @@ export default function PaywallScreen() {
       <View style={styles.logoBlock}>
         <LogoLockup width={160} />
       </View>
-      <Text style={[styles.title, rtl && styles.textRTL]}>אין לך מנוי פעיל</Text>
+      {/* Generic wording on purpose — this screen is reached two ways now:
+          redirected here with no access at all, or navigated here directly
+          from the renewal-reminder banner while a yearly plan still has a
+          few days left. "You have no active subscription" would be simply
+          false in the second case. */}
+      <Text style={[styles.title, rtl && styles.textRTL]}>בחר/י מנוי</Text>
       <Text style={[styles.subtitle, rtl && styles.textRTL]}>
-        כדי לצפות בלימוד היומי, יש לרכוש מנוי.
+        לצפייה רציפה בלימוד היומי.
       </Text>
 
       {loadingPrices ? (

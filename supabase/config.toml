@@ -408,6 +408,11 @@ verify_jwt = false
 # CRON_SECRET check inside the function, same pattern as send-reminder-pushes.
 verify_jwt = false
 
+[functions.send-renewal-reminders]
+# Called by a pg_cron job via net.http_post — authenticated via its own
+# CRON_SECRET check inside the function, same pattern as send-reminder-pushes.
+verify_jwt = false
+
 [analytics]
 # Disabled: this local Logflare container has repeatedly crashed/gone
 # unhealthy in this environment and isn't used by the app (no code reads

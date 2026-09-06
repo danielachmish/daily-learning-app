@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GradientButton } from '../components/GradientButton';
 import { RemoteImage } from '../components/RemoteImage';
+import { RenewalReminderBanner } from '../components/RenewalReminderBanner';
 import {
   completeLesson,
   fetchCompletionStatus,
@@ -22,6 +23,7 @@ import {
   fetchLessonImages,
 } from '../services/lessons';
 import { fetchTodayDedicationsCount } from '../services/dedications';
+import { fetchActiveSubscription } from '../services/subscriptions';
 import { colors } from '../theme/colors';
 import { addDays, toDateOnlyString } from '../utils/date';
 import { isRTL } from '../utils/rtl';
@@ -63,6 +65,7 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
   const [encouragement, setEncouragement] = useState<string | null>(null);
 
   const [dedicationsCount, setDedicationsCount] = useState(0);
+  const [renewalDaysLeft, setRenewalDaysLeft] = useState<number | null>(null);
 
   const rtl = isRTL(profile.language);
 
@@ -75,6 +78,22 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    // Only yearly plans need this — monthly renews itself automatically via
+    // Nedarim's standing order (see create-nedarim-payment's own comment).
+    fetchActiveSubscription(profile.id).then(({ subscription }) => {
+      if (!isMounted || !subscription || subscription.planType !== 'yearly') return;
+      const daysLeft = Math.ceil(
+        (new Date(subscription.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+      );
+      if (daysLeft <= 14) setRenewalDaysLeft(Math.max(daysLeft, 0));
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [profile.id]);
 
   useEffect(() => {
     let isMounted = true;
@@ -186,6 +205,8 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
             expo-notifications' local scheduler works natively without
             this class of issue at all. */}
       </View>
+
+      {renewalDaysLeft !== null && <RenewalReminderBanner daysLeft={renewalDaysLeft} rtl={rtl} />}
 
       {loading ? (
         <View style={styles.centerFill}>
