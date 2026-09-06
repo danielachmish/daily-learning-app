@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { GradientButton } from '../src/components/GradientButton';
 import { LogoLockup } from '../src/components/LogoLockup';
 import { useAuth } from '../src/hooks/useAuth';
 import { colors } from '../src/theme/colors';
@@ -126,17 +127,13 @@ export default function RegisterScreen() {
 
       {error && <Text style={styles.errorText}>{error}</Text>}
 
-      <Pressable
-        style={[styles.button, submitting && styles.buttonDisabled]}
-        onPress={handleSubmit}
-        disabled={submitting}
-      >
+      <GradientButton style={styles.button} onPress={handleSubmit} disabled={submitting}>
         {submitting ? (
           <ActivityIndicator color={colors.onTeal} />
         ) : (
           <Text style={styles.buttonText}>הרשמ/י</Text>
         )}
-      </Pressable>
+      </GradientButton>
 
       <Link href="/login" style={styles.link}>
         <Text style={styles.linkText}>כבר יש לך חשבון? התחבר/י</Text>
@@ -247,14 +244,10 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   button: {
-    backgroundColor: colors.teal400,
     paddingVertical: 14,
     borderRadius: 999,
     alignItems: 'center',
     marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
   },
   buttonText: {
     color: colors.onTeal,

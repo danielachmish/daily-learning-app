@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { GradientButton } from '../src/components/GradientButton';
 import { supabase } from '../src/services/supabase';
 import { colors } from '../src/theme/colors';
 
@@ -181,17 +182,13 @@ export default function PaymentScreenWeb() {
             {(phase === 'ready' || phase === 'paying') && (
               <View style={styles.payButtonWrap}>
                 {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
-                <Pressable
-                  style={[styles.payButton, phase === 'paying' && styles.payButtonDisabled]}
-                  onPress={handlePayPress}
-                  disabled={phase === 'paying'}
-                >
+                <GradientButton style={styles.payButton} onPress={handlePayPress} disabled={phase === 'paying'}>
                   {phase === 'paying' ? (
                     <ActivityIndicator size="small" color={colors.onTeal} />
                   ) : (
                     <Text style={styles.payButtonText}>בצע תשלום</Text>
                   )}
-                </Pressable>
+                </GradientButton>
               </View>
             )}
           </View>
@@ -257,15 +254,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   payButton: {
-    backgroundColor: colors.teal400,
     paddingVertical: 14,
     paddingHorizontal: 40,
     borderRadius: 999,
     minWidth: 200,
     alignItems: 'center',
-  },
-  payButtonDisabled: {
-    opacity: 0.6,
   },
   payButtonText: {
     color: colors.onTeal,

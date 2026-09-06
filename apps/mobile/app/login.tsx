@@ -2,7 +2,6 @@ import { Link, Redirect } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -10,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { GradientButton } from '../src/components/GradientButton';
 import { LogoLockup } from '../src/components/LogoLockup';
 import { useAuth } from '../src/hooks/useAuth';
 import { colors } from '../src/theme/colors';
@@ -74,17 +74,13 @@ export default function LoginScreen() {
 
       {error && <Text style={[styles.errorText, rtl && styles.textRTL]}>{error}</Text>}
 
-      <Pressable
-        style={[styles.button, submitting && styles.buttonDisabled]}
-        onPress={handleSubmit}
-        disabled={submitting}
-      >
+      <GradientButton style={styles.button} onPress={handleSubmit} disabled={submitting}>
         {submitting ? (
           <ActivityIndicator color={colors.onTeal} />
         ) : (
           <Text style={styles.buttonText}>התחבר/י</Text>
         )}
-      </Pressable>
+      </GradientButton>
 
       <Link href="/register" style={styles.link}>
         <Text style={styles.linkText}>אין לך חשבון? הרשמ/י כאן</Text>
@@ -132,14 +128,10 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   button: {
-    backgroundColor: colors.teal400,
     paddingVertical: 14,
     borderRadius: 999,
     alignItems: 'center',
     marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
   },
   buttonText: {
     color: colors.onTeal,

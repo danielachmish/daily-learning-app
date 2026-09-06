@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { GradientButton } from '../components/GradientButton';
 import { createDedication, fetchDurationOptions } from '../services/dedications';
 import { startCheckout } from '../services/payments';
 import { colors } from '../theme/colors';
@@ -109,9 +110,9 @@ export function CreateDedicationScreen({ profile }: Props) {
 
         {checkoutError && <Text style={styles.errorText}>{checkoutError}</Text>}
 
-        <Pressable style={styles.submitButton} onPress={handlePayNow} disabled={checkingOut}>
+        <GradientButton style={styles.submitButton} onPress={handlePayNow} disabled={checkingOut}>
           {checkingOut ? <ActivityIndicator color={colors.onTeal} /> : <Text style={styles.submitButtonText}>שלם/י עכשיו</Text>}
-        </Pressable>
+        </GradientButton>
 
         <Pressable style={styles.linkButton} onPress={() => router.push('/dedications/my')}>
           <Text style={styles.linkButtonText}>ההקדשות שלי</Text>
@@ -194,13 +195,13 @@ export function CreateDedicationScreen({ profile }: Props) {
 
       {error && <Text style={styles.errorText}>{error}</Text>}
 
-      <Pressable
-        style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
+      <GradientButton
+        style={styles.submitButton}
         onPress={handleSubmit}
         disabled={submitting || optionsLoading || options.length === 0}
       >
         {submitting ? <ActivityIndicator color={colors.onTeal} /> : <Text style={styles.submitButtonText}>הקדש/י</Text>}
-      </Pressable>
+      </GradientButton>
       </ScrollView>
     </SafeAreaView>
   );
@@ -309,14 +310,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   submitButton: {
-    backgroundColor: colors.teal400,
     paddingVertical: 14,
     borderRadius: 999,
     alignItems: 'center',
     marginTop: 16,
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
   },
   submitButtonText: {
     color: colors.onTeal,

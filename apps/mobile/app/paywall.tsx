@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { GradientButton } from '../src/components/GradientButton';
 import { LogoLockup } from '../src/components/LogoLockup';
 import { useAuth } from '../src/hooks/useAuth';
 import { startCheckout } from '../src/services/payments';
@@ -91,35 +92,35 @@ export default function PaywallScreen() {
         <Text style={styles.errorText}>שגיאה בטעינת המחירים: {priceError}</Text>
       ) : (
         <View style={styles.plans}>
-          <Pressable
+          <GradientButton
             style={styles.planButton}
             onPress={() => handleSubscribe('monthly')}
             disabled={checkingOutPlan !== null}
           >
             {checkingOutPlan === 'monthly' ? (
-              <ActivityIndicator color={colors.teal600} />
+              <ActivityIndicator color={colors.onTeal} />
             ) : (
               <>
                 <Text style={styles.planButtonTitle}>מנוי חודשי</Text>
                 {monthlyPrice && <Text style={styles.planButtonPrice}>₪{monthlyPrice} / חודש</Text>}
               </>
             )}
-          </Pressable>
+          </GradientButton>
 
-          <Pressable
+          <GradientButton
             style={styles.planButton}
             onPress={() => handleSubscribe('yearly')}
             disabled={checkingOutPlan !== null}
           >
             {checkingOutPlan === 'yearly' ? (
-              <ActivityIndicator color={colors.teal600} />
+              <ActivityIndicator color={colors.onTeal} />
             ) : (
               <>
                 <Text style={styles.planButtonTitle}>מנוי שנתי</Text>
                 {yearlyPrice && <Text style={styles.planButtonPrice}>₪{yearlyPrice} / שנה</Text>}
               </>
             )}
-          </Pressable>
+          </GradientButton>
         </View>
       )}
 
@@ -170,8 +171,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   planButton: {
-    borderWidth: 1.5,
-    borderColor: colors.teal400,
     borderRadius: 16,
     paddingVertical: 18,
     alignItems: 'center',
@@ -179,11 +178,11 @@ const styles = StyleSheet.create({
   planButtonTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: colors.teal600,
+    color: colors.onTeal,
   },
   planButtonPrice: {
     fontSize: 13,
-    color: colors.teal600,
+    color: colors.onTeal,
     marginTop: 2,
   },
   signOutLink: {

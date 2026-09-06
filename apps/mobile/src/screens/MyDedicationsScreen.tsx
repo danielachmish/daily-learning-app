@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { GradientButton } from '../components/GradientButton';
 import { deleteDedication, fetchMyDedications } from '../services/dedications';
 import { startCheckout } from '../services/payments';
 import { colors } from '../theme/colors';
@@ -113,17 +114,19 @@ export function MyDedicationsScreen({ profile }: Props) {
 
                 {pendingPayment && (
                   <View style={styles.cardActions}>
-                    <Pressable
-                      style={styles.payButton}
-                      onPress={() => handlePay(dedication.id)}
-                      disabled={busy}
-                    >
-                      {busy ? (
-                        <ActivityIndicator color={colors.onTeal} size="small" />
-                      ) : (
-                        <Text style={styles.payButtonText}>שלם/י עכשיו</Text>
-                      )}
-                    </Pressable>
+                    <View style={styles.payButtonWrap}>
+                      <GradientButton
+                        style={styles.payButton}
+                        onPress={() => handlePay(dedication.id)}
+                        disabled={busy}
+                      >
+                        {busy ? (
+                          <ActivityIndicator color={colors.onTeal} size="small" />
+                        ) : (
+                          <Text style={styles.payButtonText}>שלם/י עכשיו</Text>
+                        )}
+                      </GradientButton>
+                    </View>
                     <Pressable
                       style={styles.deleteButton}
                       onPress={() => handleDelete(dedication)}
@@ -235,9 +238,10 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 8,
   },
-  payButton: {
+  payButtonWrap: {
     flex: 1,
-    backgroundColor: colors.teal400,
+  },
+  payButton: {
     borderRadius: 999,
     paddingVertical: 9,
     alignItems: 'center',

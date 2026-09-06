@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { GradientButton } from '../components/GradientButton';
 import { RemoteImage } from '../components/RemoteImage';
 import {
   completeLesson,
@@ -223,8 +224,9 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
             {encouragement && (
               <Text style={[styles.encouragementText, rtl && styles.textRTL]}>{encouragement}</Text>
             )}
-            <Pressable
-              style={[styles.completeButton, completed && styles.completeButtonDone]}
+            <GradientButton
+              style={styles.completeButton}
+              colors={completed ? [colors.teal900, colors.teal900] : undefined}
               onPress={handleComplete}
               disabled={completed || completing}
             >
@@ -235,7 +237,7 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
                   {completed ? 'הושלם' : 'סיימתי'}
                 </Text>
               )}
-            </Pressable>
+            </GradientButton>
           </View>
 
           <Pressable onPress={() => Linking.openURL('https://danielachmish.com')}>
@@ -376,13 +378,9 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   completeButton: {
-    backgroundColor: colors.teal400,
     paddingVertical: 16,
     borderRadius: 999,
     alignItems: 'center',
-  },
-  completeButtonDone: {
-    backgroundColor: colors.teal900,
   },
   completeButtonText: {
     color: colors.onTeal,
