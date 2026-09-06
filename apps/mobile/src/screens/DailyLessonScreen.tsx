@@ -38,8 +38,7 @@ const ENCOURAGEMENT_MESSAGES = (streak: number | undefined): string[] => [
   'המשכת היום, זה מה שבונה התמדה.',
 ];
 
-// TODO: replace with real App Store / Play Store links once published.
-const APP_SHARE_LINK = 'https://dailylearning.app';
+const APP_SHARE_LINK = 'https://halimudhayomi.co.il';
 
 const SHARE_MESSAGES: Record<UserProfile['language'], string> = {
   he: `הצטרפו אליי ללימוד היומי! 📖\n${APP_SHARE_LINK}`,
