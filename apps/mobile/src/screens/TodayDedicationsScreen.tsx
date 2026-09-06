@@ -1,7 +1,7 @@
 import type { Dedication, UserProfile } from '@daily-learning/shared';
 import { Link } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, SectionList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { fetchRecentDedications } from '../services/dedications';
@@ -11,6 +11,35 @@ import { isRTL } from '../utils/rtl';
 
 interface Props {
   profile: UserProfile;
+}
+
+interface DateSection {
+  title: string;
+  data: Dedication[];
+}
+
+/**
+ * Groups dedications by the date/date-range they cover, so a busy day with
+ * several dedications shows one date header instead of repeating the same
+ * date on every card — dedications is already ordered newest-covered-date
+ * first, and Map preserves insertion order, so the sections come out in the
+ * same order with no extra sort needed.
+ */
+function groupByDate(dedications: Dedication[]): DateSection[] {
+  const groups = new Map<string, Dedication[]>();
+  for (const dedication of dedications) {
+    const key =
+      dedication.dedication_date === dedication.end_date
+        ? dedication.dedication_date
+        : `${dedication.dedication_date} – ${dedication.end_date}`;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.push(dedication);
+    } else {
+      groups.set(key, [dedication]);
+    }
+  }
+  return Array.from(groups.entries()).map(([title, data]) => ({ title, data }));
 }
 
 export function TodayDedicationsScreen({ profile }: Props) {
@@ -31,6 +60,8 @@ export function TodayDedicationsScreen({ profile }: Props) {
       isMounted = false;
     };
   }, []);
+
+  const sections = useMemo(() => groupByDate(dedications), [dedications]);
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -54,27 +85,29 @@ export function TodayDedicationsScreen({ profile }: Props) {
           <Text style={[styles.emptyText, rtl && styles.textRTL]}>עדיין אין הקדשות מאושרות.</Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.list}>
-          {dedications.map((dedication) => (
-            <View key={dedication.id} style={styles.card}>
+        <SectionList
+          sections={sections}
+          keyExtractor={(dedication) => dedication.id}
+          contentContainerStyle={styles.list}
+          stickySectionHeadersEnabled={false}
+          renderSectionHeader={({ section }) => (
+            // Rendered LTR regardless of interface language — same bidi fix as
+            // MyDedicationsScreen, otherwise a range like "2026-09-02 – 2026-10-01"
+            // visually reverses under RTL.
+            <Text style={styles.sectionHeader}>{section.title}</Text>
+          )}
+          renderItem={({ item: dedication }) => (
+            <View style={styles.card}>
               <Text style={[styles.cardType, rtl && styles.textRTL]}>
                 {DEDICATION_TYPE_LABELS[dedication.type]}
               </Text>
               <Text style={[styles.cardText, rtl && styles.textRTL]}>{dedication.dedication_text}</Text>
-              {/* Dates render LTR regardless of interface language — same bidi
-                  fix as MyDedicationsScreen, otherwise a range like
-                  "2026-09-02 – 2026-10-01" visually reverses under RTL. */}
-              <Text style={styles.cardDate}>
-                {dedication.dedication_date === dedication.end_date
-                  ? dedication.dedication_date
-                  : `${dedication.dedication_date} – ${dedication.end_date}`}
-              </Text>
               <Text style={[styles.cardDonor, rtl && styles.textRTL]}>
                 {dedication.donor_name ? `מאת: ${dedication.donor_name}` : 'אנונימי'}
               </Text>
             </View>
-          ))}
-        </ScrollView>
+          )}
+        />
       )}
 
       <Link href="/dedications/my" style={styles.myLink}>
@@ -131,7 +164,14 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   list: {
-    gap: 12,
+    gap: 8,
+  },
+  sectionHeader: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.teal600,
+    marginTop: 12,
+    marginBottom: 6,
   },
   card: {
     borderWidth: 1,
@@ -140,6 +180,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 12,
     gap: 4,
+    marginBottom: 8,
   },
   cardType: {
     fontSize: 15,
@@ -149,11 +190,6 @@ const styles = StyleSheet.create({
   cardText: {
     fontSize: 14,
     color: colors.ink700,
-  },
-  cardDate: {
-    fontSize: 12,
-    color: colors.slate300,
-    marginTop: 2,
   },
   cardDonor: {
     fontSize: 12,
