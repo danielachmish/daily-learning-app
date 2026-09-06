@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { GradientButton } from '../src/components/GradientButton';
 import { LogoLockup } from '../src/components/LogoLockup';
 import { useAuth } from '../src/hooks/useAuth';
+import { t } from '../src/i18n/strings';
 import { startCheckout } from '../src/services/payments';
 import { supabase } from '../src/services/supabase';
 import { colors } from '../src/theme/colors';
@@ -20,7 +21,9 @@ export default function PaywallScreen() {
   const [priceError, setPriceError] = useState<string | null>(null);
   const [checkingOutPlan, setCheckingOutPlan] = useState<'monthly' | 'yearly' | null>(null);
 
-  const rtl = isRTL(profile?.language ?? 'he');
+  const language = profile?.language ?? 'he';
+  const rtl = isRTL(language);
+  const s = t(language);
 
   useEffect(() => {
     let isMounted = true;
@@ -56,14 +59,11 @@ export default function PaywallScreen() {
     setCheckingOutPlan(null);
 
     if (error) {
-      notify('שגיאה', error);
+      notify(s.paywall.checkoutErrorTitle, error, language);
       return;
     }
 
-    notify(
-      'התשלום בעיבוד',
-      'אם התשלום הצליח, הגישה תיפתח בעוד רגע. אפשר לחזור למסך הראשי ולנסות שוב אם התוכן עדיין חסום.'
-    );
+    notify(s.paywall.processingTitle, s.paywall.processingMessage, language);
   }
 
   // Placed after all hooks above, never before — signOut() really does
@@ -86,15 +86,13 @@ export default function PaywallScreen() {
           from the renewal-reminder banner while a yearly plan still has a
           few days left. "You have no active subscription" would be simply
           false in the second case. */}
-      <Text style={[styles.title, rtl && styles.textRTL]}>בחר/י מנוי</Text>
-      <Text style={[styles.subtitle, rtl && styles.textRTL]}>
-        לצפייה רציפה בלימוד היומי.
-      </Text>
+      <Text style={[styles.title, rtl && styles.textRTL]}>{s.paywall.title}</Text>
+      <Text style={[styles.subtitle, rtl && styles.textRTL]}>{s.paywall.subtitle}</Text>
 
       {loadingPrices ? (
         <ActivityIndicator style={styles.loader} />
       ) : priceError ? (
-        <Text style={styles.errorText}>שגיאה בטעינת המחירים: {priceError}</Text>
+        <Text style={styles.errorText}>{s.paywall.pricesLoadError(priceError)}</Text>
       ) : (
         <View style={styles.plans}>
           <GradientButton
@@ -106,8 +104,10 @@ export default function PaywallScreen() {
               <ActivityIndicator color={colors.onTeal} />
             ) : (
               <>
-                <Text style={styles.planButtonTitle}>מנוי חודשי</Text>
-                {monthlyPrice && <Text style={styles.planButtonPrice}>₪{monthlyPrice} / חודש</Text>}
+                <Text style={styles.planButtonTitle}>{s.paywall.monthlyPlanTitle}</Text>
+                {monthlyPrice && (
+                  <Text style={styles.planButtonPrice}>{s.paywall.monthlyPlanPrice(monthlyPrice)}</Text>
+                )}
               </>
             )}
           </GradientButton>
@@ -121,8 +121,10 @@ export default function PaywallScreen() {
               <ActivityIndicator color={colors.onTeal} />
             ) : (
               <>
-                <Text style={styles.planButtonTitle}>מנוי שנתי</Text>
-                {yearlyPrice && <Text style={styles.planButtonPrice}>₪{yearlyPrice} / שנה</Text>}
+                <Text style={styles.planButtonTitle}>{s.paywall.yearlyPlanTitle}</Text>
+                {yearlyPrice && (
+                  <Text style={styles.planButtonPrice}>{s.paywall.yearlyPlanPrice(yearlyPrice)}</Text>
+                )}
               </>
             )}
           </GradientButton>
@@ -130,7 +132,7 @@ export default function PaywallScreen() {
       )}
 
       <Pressable style={styles.signOutLink} onPress={signOut}>
-        <Text style={styles.signOutText}>התנתק/י</Text>
+        <Text style={styles.signOutText}>{s.paywall.signOut}</Text>
       </Pressable>
     </SafeAreaView>
   );

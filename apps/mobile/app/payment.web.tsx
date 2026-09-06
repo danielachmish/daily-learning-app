@@ -4,6 +4,8 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GradientButton } from '../src/components/GradientButton';
+import { useAuth } from '../src/hooks/useAuth';
+import { t } from '../src/i18n/strings';
 import { supabase } from '../src/services/supabase';
 import { colors } from '../src/theme/colors';
 
@@ -36,6 +38,8 @@ const iframeStyle: React.CSSProperties = { width: '100%', border: 'none' };
  * (server-to-server, IP-checked: a spoofed postMessage can't fake that).
  */
 export default function PaymentScreenWeb() {
+  const { profile } = useAuth();
+  const s = t(profile?.language ?? 'he');
   const { paymentId, iframeUrl, nedarimTransactionId } = useLocalSearchParams<{
     paymentId: string;
     iframeUrl: string;
@@ -111,7 +115,7 @@ export default function PaymentScreenWeb() {
       } else if (name === 'TransactionResponse') {
         const result = event.data.Value ?? {};
         if (result.Status === 'Error') {
-          setErrorMessage(result.Message ?? 'התשלום לא הושלם.');
+          setErrorMessage(result.Message ?? s.payment.paymentNotCompleted);
           setPhase('ready'); // unlock the button so the donor can fix the card and retry
         } else if (result.Status === 'OK') {
           startPolling();
@@ -148,7 +152,7 @@ export default function PaymentScreenWeb() {
   if (!iframeUrl || !nedarimTransactionId || !paymentId) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
-        <Text style={styles.message}>חסרים פרטי תשלום. יש לחזור ולנסות שוב.</Text>
+        <Text style={styles.message}>{s.payment.missingDetails}</Text>
       </SafeAreaView>
     );
   }
@@ -158,9 +162,9 @@ export default function PaymentScreenWeb() {
       {(phase === 'loading' || phase === 'ready' || phase === 'paying') && (
         <>
           <View style={styles.header}>
-            <Text style={styles.headerText}>תשלום מאובטח</Text>
+            <Text style={styles.headerText}>{s.payment.headerTitle}</Text>
             <Pressable onPress={() => router.back()}>
-              <Text style={styles.cancelText}>ביטול</Text>
+              <Text style={styles.cancelText}>{s.payment.cancel}</Text>
             </Pressable>
           </View>
 
@@ -186,7 +190,7 @@ export default function PaymentScreenWeb() {
                   {phase === 'paying' ? (
                     <ActivityIndicator size="small" color={colors.onTeal} />
                   ) : (
-                    <Text style={styles.payButtonText}>בצע תשלום</Text>
+                    <Text style={styles.payButtonText}>{s.payment.payButton}</Text>
                   )}
                 </GradientButton>
               </View>
@@ -198,23 +202,21 @@ export default function PaymentScreenWeb() {
       {phase === 'confirming' && (
         <View style={styles.centerFill}>
           <ActivityIndicator size="large" color={colors.teal400} />
-          <Text style={styles.message}>מוודא מול חברת הסליקה שהתשלום התקבל…</Text>
+          <Text style={styles.message}>{s.payment.confirming}</Text>
         </View>
       )}
 
       {phase === 'success' && (
         <View style={styles.centerFill}>
-          <Text style={styles.successText}>התשלום התקבל בהצלחה! 🎉</Text>
+          <Text style={styles.successText}>{s.payment.success}</Text>
         </View>
       )}
 
       {phase === 'timeout' && (
         <View style={styles.centerFill}>
-          <Text style={styles.message}>
-            עדיין מעבדים את התשלום — זה יכול לקחת כמה דקות. אפשר לחזור למסך הראשי ולבדוק שוב בהמשך.
-          </Text>
+          <Text style={styles.message}>{s.payment.timeoutMessage}</Text>
           <Pressable style={styles.manualCheckButton} onPress={() => router.replace('/')}>
-            <Text style={styles.manualCheckText}>חזרה למסך הראשי</Text>
+            <Text style={styles.manualCheckText}>{s.payment.backToHome}</Text>
           </Pressable>
         </View>
       )}

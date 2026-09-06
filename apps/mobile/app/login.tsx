@@ -13,8 +13,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { GradientButton } from '../src/components/GradientButton';
 import { LogoLockup } from '../src/components/LogoLockup';
 import { useAuth } from '../src/hooks/useAuth';
+import { t } from '../src/i18n/strings';
 import { colors } from '../src/theme/colors';
-import { isDeviceRTL } from '../src/utils/rtl';
+import { getDeviceLanguage, isRTL } from '../src/utils/rtl';
 
 export default function LoginScreen() {
   const { session, loading: authLoading, signIn } = useAuth();
@@ -29,14 +30,17 @@ export default function LoginScreen() {
   }
 
   // No profile exists yet at this screen — fall back to the device's own
-  // locale direction instead of hardcoding Hebrew/RTL.
-  const rtl = isDeviceRTL();
+  // locale (both direction and text content) instead of hardcoding
+  // Hebrew/RTL.
+  const language = getDeviceLanguage();
+  const rtl = isRTL(language);
+  const s = t(language);
 
   async function handleSubmit() {
     setError(null);
 
     if (!email || !password) {
-      setError('נא למלא אימייל וסיסמה.');
+      setError(s.login.missingFields);
       return;
     }
 
@@ -54,11 +58,11 @@ export default function LoginScreen() {
       <View style={styles.logoBlock}>
         <LogoLockup />
       </View>
-      <Text style={[styles.title, rtl && styles.textRTL]}>התחברות</Text>
+      <Text style={[styles.title, rtl && styles.textRTL]}>{s.login.title}</Text>
 
       <TextInput
         style={[styles.input, rtl && styles.textRTL]}
-        placeholder="אימייל"
+        placeholder={s.login.emailPlaceholder}
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
@@ -68,7 +72,7 @@ export default function LoginScreen() {
       <View style={styles.passwordRow}>
         <TextInput
           style={[styles.input, styles.passwordInput, rtl && styles.textRTL]}
-          placeholder="סיסמה"
+          placeholder={s.login.passwordPlaceholder}
           value={password}
           onChangeText={setPassword}
           secureTextEntry={!showPassword}
@@ -89,12 +93,12 @@ export default function LoginScreen() {
         {submitting ? (
           <ActivityIndicator color={colors.onTeal} />
         ) : (
-          <Text style={styles.buttonText}>התחבר/י</Text>
+          <Text style={styles.buttonText}>{s.login.submit}</Text>
         )}
       </GradientButton>
 
       <Link href="/register" style={styles.link}>
-        <Text style={styles.linkText}>אין לך חשבון? הרשמ/י כאן</Text>
+        <Text style={styles.linkText}>{s.login.noAccount}</Text>
       </Link>
     </SafeAreaView>
   );

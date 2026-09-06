@@ -13,7 +13,17 @@
  * can call them without needing to be inside a component that consumes a
  * context — AppAlertHost registers itself here via `registerDialogHandler`
  * once it mounts.
+ *
+ * The default confirm/cancel button labels are language-aware — every
+ * call site passes the current user's language (falling back to Hebrew
+ * for the rare call before a profile exists), so a screen that's
+ * otherwise fully translated doesn't fall back to Hebrew "אישור"/"ביטול"
+ * buttons underneath it.
  */
+
+import type { Language } from '@daily-learning/shared';
+
+import { t } from '../i18n/strings';
 
 export interface ConfirmOptions {
   confirmLabel?: string;
@@ -39,18 +49,23 @@ export function registerDialogHandler(next: DialogHandler | null): void {
   handler = next;
 }
 
-export async function notify(title: string, message?: string): Promise<void> {
+export async function notify(title: string, message?: string, language: Language = 'he'): Promise<void> {
   if (!handler) return;
-  await handler({ title, message, confirmLabel: 'אישור' });
+  await handler({ title, message, confirmLabel: t(language).common.ok });
 }
 
-export async function confirmAsync(title: string, message?: string, options?: ConfirmOptions): Promise<boolean> {
+export async function confirmAsync(
+  title: string,
+  message?: string,
+  options?: ConfirmOptions,
+  language: Language = 'he'
+): Promise<boolean> {
   if (!handler) return false;
   return handler({
     title,
     message,
-    confirmLabel: options?.confirmLabel ?? 'אישור',
-    cancelLabel: options?.cancelLabel ?? 'ביטול',
+    confirmLabel: options?.confirmLabel ?? t(language).common.ok,
+    cancelLabel: options?.cancelLabel ?? t(language).common.cancel,
     destructive: options?.destructive,
   });
 }

@@ -13,11 +13,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GradientButton } from '../components/GradientButton';
+import { t } from '../i18n/strings';
 import { createDedication, fetchDurationOptions } from '../services/dedications';
 import { startCheckout } from '../services/payments';
 import { colors } from '../theme/colors';
 import { addDays, toDateOnlyString } from '../utils/date';
-import { DEDICATION_TYPE_LABELS } from '../utils/dedicationLabels';
+import { getDedicationTypeLabels } from '../utils/dedicationLabels';
 import { isRTL } from '../utils/rtl';
 
 interface Props {
@@ -29,6 +30,8 @@ const DEDICATION_TYPES: DedicationType[] = ['memory', 'healing', 'success', 'mar
 export function CreateDedicationScreen({ profile }: Props) {
   const router = useRouter();
   const rtl = isRTL(profile.language);
+  const s = t(profile.language);
+  const dedicationTypeLabels = getDedicationTypeLabels(profile.language);
 
   const [dedicationDate, setDedicationDate] = useState(() => toDateOnlyString(new Date()));
   const [type, setType] = useState<DedicationType>('memory');
@@ -62,11 +65,11 @@ export function CreateDedicationScreen({ profile }: Props) {
     setError(null);
 
     if (!dedicationText.trim()) {
-      setError('נא להזין נוסח הקדשה.');
+      setError(s.createDedication.missingText);
       return;
     }
     if (!selectedOptionId) {
-      setError('נא לבחור למשך כמה זמן ההקדשה.');
+      setError(s.createDedication.missingDuration);
       return;
     }
 
@@ -104,18 +107,20 @@ export function CreateDedicationScreen({ profile }: Props) {
   if (createdDedicationId) {
     return (
       <SafeAreaView style={styles.centerFill} edges={['bottom']}>
-        <Text style={[styles.successText, rtl && styles.textRTL]}>
-          ההקדשה נשמרה! היא תופיע לאחר תשלום ואישור מנהל.
-        </Text>
+        <Text style={[styles.successText, rtl && styles.textRTL]}>{s.createDedication.savedMessage}</Text>
 
         {checkoutError && <Text style={styles.errorText}>{checkoutError}</Text>}
 
         <GradientButton style={styles.submitButton} onPress={handlePayNow} disabled={checkingOut}>
-          {checkingOut ? <ActivityIndicator color={colors.onTeal} /> : <Text style={styles.submitButtonText}>שלם/י עכשיו</Text>}
+          {checkingOut ? (
+            <ActivityIndicator color={colors.onTeal} />
+          ) : (
+            <Text style={styles.submitButtonText}>{s.createDedication.payNowButton}</Text>
+          )}
         </GradientButton>
 
         <Pressable style={styles.linkButton} onPress={() => router.push('/dedications/my')}>
-          <Text style={styles.linkButtonText}>ההקדשות שלי</Text>
+          <Text style={styles.linkButtonText}>{s.createDedication.myDedicationsLink}</Text>
         </Pressable>
       </SafeAreaView>
     );
@@ -124,9 +129,9 @@ export function CreateDedicationScreen({ profile }: Props) {
   return (
     <SafeAreaView style={styles.flexFill} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={[styles.title, rtl && styles.textRTL]}>הקדשת לימוד</Text>
+        <Text style={[styles.title, rtl && styles.textRTL]}>{s.createDedication.title}</Text>
 
-      <Text style={[styles.label, rtl && styles.textRTL]}>תאריך ההקדשה</Text>
+      <Text style={[styles.label, rtl && styles.textRTL]}>{s.createDedication.dateLabel}</Text>
       <View style={styles.dateRow}>
         <Pressable style={styles.dateNavButton} onPress={() => setDedicationDate((d) => addDays(d, -1))}>
           <Text style={styles.dateNavButtonText}>‹</Text>
@@ -137,11 +142,11 @@ export function CreateDedicationScreen({ profile }: Props) {
         </Pressable>
       </View>
 
-      <Text style={[styles.label, rtl && styles.textRTL]}>למשך כמה זמן</Text>
+      <Text style={[styles.label, rtl && styles.textRTL]}>{s.createDedication.durationLabel}</Text>
       {optionsLoading ? (
-        <Text style={[styles.priceText, rtl && styles.textRTL]}>טוען אפשרויות…</Text>
+        <Text style={[styles.priceText, rtl && styles.textRTL]}>{s.createDedication.loadingOptions}</Text>
       ) : options.length === 0 ? (
-        <Text style={[styles.errorText, rtl && styles.textRTL]}>אין כרגע אפשרויות הקדשה זמינות.</Text>
+        <Text style={[styles.errorText, rtl && styles.textRTL]}>{s.createDedication.noOptionsAvailable}</Text>
       ) : (
         <View style={styles.typeList}>
           {options.map((option) => (
@@ -160,22 +165,22 @@ export function CreateDedicationScreen({ profile }: Props) {
         </View>
       )}
 
-      <Text style={[styles.label, rtl && styles.textRTL]}>סוג ההקדשה</Text>
+      <Text style={[styles.label, rtl && styles.textRTL]}>{s.createDedication.typeLabel}</Text>
       <View style={styles.typeList}>
-        {DEDICATION_TYPES.map((t) => (
+        {DEDICATION_TYPES.map((dedicationType) => (
           <Pressable
-            key={t}
-            style={[styles.typeRow, type === t && styles.typeRowSelected]}
-            onPress={() => setType(t)}
+            key={dedicationType}
+            style={[styles.typeRow, type === dedicationType && styles.typeRowSelected]}
+            onPress={() => setType(dedicationType)}
           >
-            <Text style={[styles.typeRowText, type === t && styles.typeRowTextSelected]}>
-              {DEDICATION_TYPE_LABELS[t]}
+            <Text style={[styles.typeRowText, type === dedicationType && styles.typeRowTextSelected]}>
+              {dedicationTypeLabels[dedicationType]}
             </Text>
           </Pressable>
         ))}
       </View>
 
-      <Text style={[styles.label, rtl && styles.textRTL]}>נוסח ההקדשה</Text>
+      <Text style={[styles.label, rtl && styles.textRTL]}>{s.createDedication.textLabel}</Text>
       <TextInput
         style={[styles.textArea, rtl && styles.textRTL]}
         value={dedicationText}
@@ -185,7 +190,7 @@ export function CreateDedicationScreen({ profile }: Props) {
         editable={!submitting}
       />
 
-      <Text style={[styles.label, rtl && styles.textRTL]}>שם המקדיש (אופציונלי)</Text>
+      <Text style={[styles.label, rtl && styles.textRTL]}>{s.createDedication.donorLabel}</Text>
       <TextInput
         style={[styles.input, rtl && styles.textRTL]}
         value={donorName}
@@ -200,7 +205,11 @@ export function CreateDedicationScreen({ profile }: Props) {
         onPress={handleSubmit}
         disabled={submitting || optionsLoading || options.length === 0}
       >
-        {submitting ? <ActivityIndicator color={colors.onTeal} /> : <Text style={styles.submitButtonText}>הקדש/י</Text>}
+        {submitting ? (
+          <ActivityIndicator color={colors.onTeal} />
+        ) : (
+          <Text style={styles.submitButtonText}>{s.createDedication.submitButton}</Text>
+        )}
       </GradientButton>
       </ScrollView>
     </SafeAreaView>

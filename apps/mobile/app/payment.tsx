@@ -2,6 +2,8 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useAuth } from '../src/hooks/useAuth';
+import { t } from '../src/i18n/strings';
 import { colors } from '../src/theme/colors';
 
 /**
@@ -13,15 +15,16 @@ import { colors } from '../src/theme/colors';
  * web-vs-native split pattern elsewhere in payments/notifications).
  */
 export default function PaymentScreenNativeFallback() {
+  const { profile } = useAuth();
+  const s = t(profile?.language ?? 'he');
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.content}>
-        <Text style={styles.title}>התשלום זמין כרגע בגרסת האתר</Text>
-        <Text style={styles.body}>
-          כדי להשלים את התשלום, יש להיכנס לאפליקציה דרך הדפדפן (אותה כתובת בה נרשמת).
-        </Text>
+        <Text style={styles.title}>{s.paymentNativeFallback.title}</Text>
+        <Text style={styles.body}>{s.paymentNativeFallback.body}</Text>
         <Pressable style={styles.button} onPress={() => router.back()}>
-          <Text style={styles.buttonText}>חזרה</Text>
+          <Text style={styles.buttonText}>{s.paymentNativeFallback.back}</Text>
         </Pressable>
       </View>
     </SafeAreaView>

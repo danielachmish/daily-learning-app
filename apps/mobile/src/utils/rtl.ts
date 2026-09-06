@@ -16,3 +16,16 @@ export function isRTL(language: Language): boolean {
 export function isDeviceRTL(): boolean {
   return Localization.getLocales()[0]?.textDirection === 'rtl';
 }
+
+/**
+ * Best-effort language for screens reached before a profile exists
+ * (login) — picks English only when the device itself is set to English;
+ * defaults to Hebrew otherwise, matching the app's primary market and the
+ * default used on the registration form. Independent of isDeviceRTL()
+ * above (that reads the OS's own text-direction flag; this reads the
+ * language code), so the two are checked separately rather than one
+ * derived from the other.
+ */
+export function getDeviceLanguage(): Language {
+  return Localization.getLocales()[0]?.languageCode === 'en' ? 'en' : 'he';
+}

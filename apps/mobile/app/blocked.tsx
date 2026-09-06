@@ -3,12 +3,15 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '../src/hooks/useAuth';
+import { t } from '../src/i18n/strings';
 import { colors } from '../src/theme/colors';
 import { isRTL } from '../src/utils/rtl';
 
 export default function BlockedScreen() {
   const { session, profile, signOut } = useAuth();
-  const rtl = isRTL(profile?.language ?? 'he');
+  const language = profile?.language ?? 'he';
+  const rtl = isRTL(language);
+  const s = t(language);
 
   // Same fix as paywall.tsx: signOut() really does clear the session, but
   // this screen otherwise has no way to know to leave — it would just sit
@@ -19,12 +22,10 @@ export default function BlockedScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <Text style={[styles.title, rtl && styles.textRTL]}>החשבון שלך חסום</Text>
-      <Text style={[styles.subtitle, rtl && styles.textRTL]}>
-        לפרטים נוספים יש לפנות לתמיכה.
-      </Text>
+      <Text style={[styles.title, rtl && styles.textRTL]}>{s.blocked.title}</Text>
+      <Text style={[styles.subtitle, rtl && styles.textRTL]}>{s.blocked.subtitle}</Text>
       <Pressable style={styles.signOutButton} onPress={signOut}>
-        <Text style={styles.signOutText}>התנתק/י</Text>
+        <Text style={styles.signOutText}>{s.blocked.signOut}</Text>
       </Pressable>
     </SafeAreaView>
   );

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { t } from '../i18n/strings';
 import { fetchCompletedDatesForMonth, fetchLessonDatesForMonth } from '../services/lessons';
 import { colors } from '../theme/colors';
 import { getMonthMatrix, toDateOnlyString } from '../utils/date';
@@ -11,18 +12,6 @@ import { getMonthMatrix, toDateOnlyString } from '../utils/date';
 interface Props {
   profile: UserProfile;
 }
-
-const WEEKDAY_LABELS_HE = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
-const WEEKDAY_LABELS_EN = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-
-const MONTH_LABELS_HE = [
-  'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
-  'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
-];
-const MONTH_LABELS_EN = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
 
 type DayStatus = 'completed' | 'missed' | 'no_lesson' | 'pending';
 
@@ -83,8 +72,9 @@ export function CalendarScreen({ profile }: Props) {
     });
   }
 
-  const weekdayLabels = profile.language === 'he' ? WEEKDAY_LABELS_HE : WEEKDAY_LABELS_EN;
-  const monthLabel = (profile.language === 'he' ? MONTH_LABELS_HE : MONTH_LABELS_EN)[cursor.month];
+  const s = t(profile.language);
+  const weekdayLabels = s.calendar.weekdayLabels;
+  const monthLabel = s.calendar.monthLabels[cursor.month];
   const cells = getMonthMatrix(cursor.year, cursor.month);
   const weeks: (string | null)[][] = [];
   for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
@@ -160,9 +150,9 @@ export function CalendarScreen({ profile }: Props) {
           ))}
 
           <View style={styles.legend}>
-            <LegendItem color={colors.success} label="הושלם" />
-            <LegendItem color={colors.danger} label="הוחסר" />
-            <LegendItem color={colors.teal100} label="אין לימוד" />
+            <LegendItem color={colors.success} label={s.calendar.legendCompleted} />
+            <LegendItem color={colors.danger} label={s.calendar.legendMissed} />
+            <LegendItem color={colors.teal100} label={s.calendar.legendNoLesson} />
           </View>
         </View>
       )}

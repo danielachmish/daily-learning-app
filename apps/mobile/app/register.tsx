@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { GradientButton } from '../src/components/GradientButton';
 import { LogoLockup } from '../src/components/LogoLockup';
 import { useAuth } from '../src/hooks/useAuth';
+import { t } from '../src/i18n/strings';
 import { colors } from '../src/theme/colors';
 import { PRIVACY_POLICY_URL, TERMS_URL } from '../src/constants/legalUrls';
 import { isRTL } from '../src/utils/rtl';
@@ -35,12 +36,16 @@ export default function RegisterScreen() {
   }
 
   const rtl = isRTL(language);
+  // Live-updates as the user toggles the language segment below, so the
+  // form itself switches language the moment they pick it — not just
+  // screens reached after signing up.
+  const s = t(language);
 
   async function handleSubmit() {
     setError(null);
 
     if (!fullName || !phone || !email || !password) {
-      setError('נא למלא את כל השדות.');
+      setError(s.register.missingFields);
       return;
     }
 
@@ -58,18 +63,18 @@ export default function RegisterScreen() {
       <View style={styles.logoBlock}>
         <LogoLockup width={180} />
       </View>
-      <Text style={[styles.title, rtl && styles.textRTL]}>הרשמה</Text>
+      <Text style={[styles.title, rtl && styles.textRTL]}>{s.register.title}</Text>
 
       <TextInput
         style={[styles.input, rtl && styles.textRTL]}
-        placeholder="שם מלא"
+        placeholder={s.register.fullNamePlaceholder}
         value={fullName}
         onChangeText={setFullName}
         editable={!submitting}
       />
       <TextInput
         style={[styles.input, rtl && styles.textRTL]}
-        placeholder="טלפון"
+        placeholder={s.register.phonePlaceholder}
         value={phone}
         onChangeText={setPhone}
         keyboardType="phone-pad"
@@ -77,7 +82,7 @@ export default function RegisterScreen() {
       />
       <TextInput
         style={[styles.input, rtl && styles.textRTL]}
-        placeholder="אימייל"
+        placeholder={s.register.emailPlaceholder}
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
@@ -86,39 +91,39 @@ export default function RegisterScreen() {
       />
       <TextInput
         style={[styles.input, rtl && styles.textRTL]}
-        placeholder="סיסמה"
+        placeholder={s.register.passwordPlaceholder}
         value={password}
         onChangeText={setPassword}
         secureTextEntry
         editable={!submitting}
       />
 
-      <Text style={[styles.label, rtl && styles.textRTL]}>מסלול</Text>
+      <Text style={[styles.label, rtl && styles.textRTL]}>{s.register.trackLabel}</Text>
       <View style={styles.segmentRow}>
         <SegmentButton
-          label="גברים"
+          label={s.register.trackMen}
           selected={genderTrack === 'men'}
           onPress={() => setGenderTrack('men')}
           disabled={submitting}
         />
         <SegmentButton
-          label="נשים"
+          label={s.register.trackWomen}
           selected={genderTrack === 'women'}
           onPress={() => setGenderTrack('women')}
           disabled={submitting}
         />
       </View>
 
-      <Text style={[styles.label, rtl && styles.textRTL]}>שפה</Text>
+      <Text style={[styles.label, rtl && styles.textRTL]}>{s.register.languageLabel}</Text>
       <View style={styles.segmentRow}>
         <SegmentButton
-          label="עברית"
+          label={s.register.languageHebrew}
           selected={language === 'he'}
           onPress={() => setLanguage('he')}
           disabled={submitting}
         />
         <SegmentButton
-          label="English"
+          label={s.register.languageEnglish}
           selected={language === 'en'}
           onPress={() => setLanguage('en')}
           disabled={submitting}
@@ -131,24 +136,22 @@ export default function RegisterScreen() {
         {submitting ? (
           <ActivityIndicator color={colors.onTeal} />
         ) : (
-          <Text style={styles.buttonText}>הרשמ/י</Text>
+          <Text style={styles.buttonText}>{s.register.submit}</Text>
         )}
       </GradientButton>
 
       <Link href="/login" style={styles.link}>
-        <Text style={styles.linkText}>כבר יש לך חשבון? התחבר/י</Text>
+        <Text style={styles.linkText}>{s.register.haveAccount}</Text>
       </Link>
 
       <Text style={[styles.legalText, rtl && styles.textRTL]}>
-        בהרשמה אני מסכים/ה ל
+        {s.register.legalPrefix}
         <Text style={styles.legalLink} onPress={() => Linking.openURL(TERMS_URL)}>
-          {' '}
-          תנאי השימוש{' '}
+          {s.register.termsOfUse}
         </Text>
-        ול
+        {s.register.legalAnd}
         <Text style={styles.legalLink} onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}>
-          {' '}
-          מדיניות הפרטיות
+          {s.register.privacyPolicy}
         </Text>
       </Text>
     </SafeAreaView>

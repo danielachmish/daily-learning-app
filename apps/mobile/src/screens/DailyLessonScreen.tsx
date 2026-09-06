@@ -17,6 +17,7 @@ import { GradientButton } from '../components/GradientButton';
 import { LogoLockup } from '../components/LogoLockup';
 import { RemoteImage } from '../components/RemoteImage';
 import { RenewalReminderBanner } from '../components/RenewalReminderBanner';
+import { t } from '../i18n/strings';
 import {
   completeLesson,
   fetchCompletionStatus,
@@ -36,18 +37,7 @@ interface Props {
   initialDate?: string;
 }
 
-const ENCOURAGEMENT_MESSAGES = (streak: number | undefined): string[] => [
-  'כל הכבוד! עוד יום של לימוד.',
-  ...(streak ? [`רצף של ${streak} ימים — מדהים!`] : []),
-  'המשכת היום, זה מה שבונה התמדה.',
-];
-
 const APP_SHARE_LINK = 'https://halimudhayomi.co.il';
-
-const SHARE_MESSAGES: Record<UserProfile['language'], string> = {
-  he: `הצטרפו אליי ללימוד היומי! 📖\n${APP_SHARE_LINK}`,
-  en: `Join me for the daily lesson! 📖\n${APP_SHARE_LINK}`,
-};
 
 export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
   const router = useRouter();
@@ -69,6 +59,7 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
   const [renewalDaysLeft, setRenewalDaysLeft] = useState<number | null>(null);
 
   const rtl = isRTL(profile.language);
+  const s = t(profile.language);
 
   useEffect(() => {
     let isMounted = true;
@@ -148,7 +139,7 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
   }, [selectedDate, profile.gender_track, profile.language, profile.id]);
 
   async function handleShare() {
-    await Share.share({ message: SHARE_MESSAGES[profile.language] });
+    await Share.share({ message: s.dailyLesson.shareMessage(APP_SHARE_LINK) });
   }
 
   async function handleComplete() {
@@ -166,7 +157,7 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
     setCompleted(true);
 
     if (result?.status === 'completed') {
-      const messages = ENCOURAGEMENT_MESSAGES(result.currentStreak);
+      const messages = s.dailyLesson.encouragementMessages(result.currentStreak);
       setEncouragement(messages[Math.floor(Math.random() * messages.length)]);
     }
   }
@@ -178,7 +169,7 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
           style={styles.navButton}
           onPress={() => setSelectedDate((d) => addDays(d, -1))}
         >
-          <Text style={styles.navButtonText}>{rtl ? '‹ אתמול' : '‹ Prev'}</Text>
+          <Text style={styles.navButtonText}>{s.dailyLesson.prevDay}</Text>
         </Pressable>
         <View style={styles.dateColumn}>
           <LogoLockup width={72} />
@@ -188,16 +179,16 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
           style={styles.navButton}
           onPress={() => setSelectedDate((d) => addDays(d, 1))}
         >
-          <Text style={styles.navButtonText}>{rtl ? 'מחר ›' : 'Next ›'}</Text>
+          <Text style={styles.navButtonText}>{s.dailyLesson.nextDay}</Text>
         </Pressable>
       </View>
 
       <View style={styles.utilityRow}>
         <Pressable style={styles.utilityLink} onPress={() => router.push('/calendar')}>
-          <Text style={styles.utilityLinkText}>לוח שנה</Text>
+          <Text style={styles.utilityLinkText}>{s.dailyLesson.calendarLink}</Text>
         </Pressable>
         <Pressable style={styles.utilityLink} onPress={handleShare}>
-          <Text style={styles.utilityLinkText}>שיתוף</Text>
+          <Text style={styles.utilityLinkText}>{s.dailyLesson.shareLink}</Text>
         </Pressable>
         {/* "תזכורות" link removed for now — Web Push delivery on web/PWA
             turned out unreliable on some Android OEMs (e.g. Samsung's
@@ -210,7 +201,9 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
             this class of issue at all. */}
       </View>
 
-      {renewalDaysLeft !== null && <RenewalReminderBanner daysLeft={renewalDaysLeft} rtl={rtl} />}
+      {renewalDaysLeft !== null && (
+        <RenewalReminderBanner daysLeft={renewalDaysLeft} rtl={rtl} language={profile.language} />
+      )}
 
       {loading ? (
         <View style={styles.centerFill}>
@@ -223,7 +216,7 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
       ) : !lesson ? (
         <View style={styles.centerFill}>
           <Text style={[styles.emptyText, rtl && styles.textRTL]}>
-            לא קיים לימוד לתאריך זה.
+            {s.dailyLesson.noLessonForDate}
           </Text>
         </View>
       ) : (
@@ -259,14 +252,14 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
                 <ActivityIndicator color={colors.onTeal} />
               ) : (
                 <Text style={styles.completeButtonText}>
-                  {completed ? 'הושלם' : 'סיימתי'}
+                  {completed ? s.dailyLesson.completedButton : s.dailyLesson.completeButton}
                 </Text>
               )}
             </GradientButton>
           </View>
 
           <Pressable onPress={() => Linking.openURL('https://danielachmish.com')}>
-            <Text style={styles.creditText}>{'נבנה ע"י דניאל לחמיש'}</Text>
+            <Text style={styles.creditText}>{s.dailyLesson.credit}</Text>
           </Pressable>
         </ScrollView>
       )}
@@ -274,17 +267,17 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
       <Pressable style={styles.dedicationsLink} onPress={() => router.push('/dedications/today')}>
         <Text style={[styles.dedicationsLinkText, rtl && styles.textRTL]}>
           {dedicationsCount > 0
-            ? `היום מוקדש על ידי ${dedicationsCount} מקדישים`
-            : 'הקדש/י את הלימוד היום'}
+            ? s.dailyLesson.dedicationsLinkWithCount(dedicationsCount)
+            : s.dailyLesson.dedicationsLinkNone}
         </Text>
       </Pressable>
 
       <View style={styles.footerRow}>
         <Pressable onPress={() => router.push('/about')}>
-          <Text style={styles.signOutText}>אודות ומידע משפטי</Text>
+          <Text style={styles.signOutText}>{s.dailyLesson.aboutLink}</Text>
         </Pressable>
         <Pressable onPress={onSignOut}>
-          <Text style={styles.signOutText}>התנתק/י</Text>
+          <Text style={styles.signOutText}>{s.dailyLesson.signOut}</Text>
         </Pressable>
       </View>
     </SafeAreaView>

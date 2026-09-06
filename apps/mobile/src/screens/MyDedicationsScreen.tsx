@@ -5,10 +5,15 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GradientButton } from '../components/GradientButton';
+import { t } from '../i18n/strings';
 import { deleteDedication, fetchMyDedications } from '../services/dedications';
 import { startCheckout } from '../services/payments';
 import { colors } from '../theme/colors';
-import { APPROVAL_STATUS_LABELS, DEDICATION_TYPE_LABELS, PAYMENT_STATUS_LABELS } from '../utils/dedicationLabels';
+import {
+  getApprovalStatusLabels,
+  getDedicationTypeLabels,
+  getPaymentStatusLabels,
+} from '../utils/dedicationLabels';
 import { confirmAsync, notify } from '../utils/alerts';
 import { isRTL } from '../utils/rtl';
 
@@ -18,6 +23,10 @@ interface Props {
 
 export function MyDedicationsScreen({ profile }: Props) {
   const rtl = isRTL(profile.language);
+  const s = t(profile.language);
+  const dedicationTypeLabels = getDedicationTypeLabels(profile.language);
+  const paymentStatusLabels = getPaymentStatusLabels(profile.language);
+  const approvalStatusLabels = getApprovalStatusLabels(profile.language);
   const [dedications, setDedications] = useState<Dedication[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,22 +50,27 @@ export function MyDedicationsScreen({ profile }: Props) {
     const { error: payError } = await startCheckout({ type: 'dedication', dedicationId });
     setBusyId(null);
     if (payError) {
-      notify('שגיאה', payError);
+      notify(s.common.error, payError, profile.language);
     }
   }
 
   async function handleDelete(dedication: Dedication) {
-    const confirmed = await confirmAsync('מחיקת הקדשה', 'למחוק את ההקדשה הזו? לא ניתן לשחזר.', {
-      confirmLabel: 'מחק/י',
-      destructive: true,
-    });
+    const confirmed = await confirmAsync(
+      s.myDedications.deleteConfirmTitle,
+      s.myDedications.deleteConfirmMessage,
+      {
+        confirmLabel: s.myDedications.deleteConfirmButton,
+        destructive: true,
+      },
+      profile.language
+    );
     if (!confirmed) return;
 
     setBusyId(dedication.id);
     const { error: deleteError } = await deleteDedication(dedication.id);
     setBusyId(null);
     if (deleteError) {
-      notify('שגיאה', deleteError);
+      notify(s.common.error, deleteError, profile.language);
       return;
     }
     setDedications((prev) => prev.filter((d) => d.id !== dedication.id));
@@ -65,9 +79,9 @@ export function MyDedicationsScreen({ profile }: Props) {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.headerRow}>
-        <Text style={[styles.title, rtl && styles.textRTL]}>ההקדשות שלי</Text>
+        <Text style={[styles.title, rtl && styles.textRTL]}>{s.myDedications.title}</Text>
         <Link href="/dedications/new" style={styles.newLink}>
-          <Text style={styles.newLinkText}>+ הקדשה חדשה</Text>
+          <Text style={styles.newLinkText}>{s.myDedications.newDedicationLink}</Text>
         </Link>
       </View>
 
@@ -81,7 +95,7 @@ export function MyDedicationsScreen({ profile }: Props) {
         </View>
       ) : dedications.length === 0 ? (
         <View style={styles.centerFill}>
-          <Text style={[styles.emptyText, rtl && styles.textRTL]}>עדיין אין לך הקדשות.</Text>
+          <Text style={[styles.emptyText, rtl && styles.textRTL]}>{s.myDedications.emptyText}</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.list}>
@@ -103,13 +117,13 @@ export function MyDedicationsScreen({ profile }: Props) {
                     : `${dedication.dedication_date} – ${dedication.end_date}`}
                 </Text>
                 <Text style={[styles.cardType, rtl && styles.textRTL]}>
-                  {DEDICATION_TYPE_LABELS[dedication.type]}
+                  {dedicationTypeLabels[dedication.type]}
                 </Text>
                 <Text style={[styles.cardText, rtl && styles.textRTL]}>{dedication.dedication_text}</Text>
                 <View style={styles.badgeRow}>
-                  <Text style={styles.badge}>{PAYMENT_STATUS_LABELS[dedication.payment_status]}</Text>
-                  <Text style={styles.badge}>{APPROVAL_STATUS_LABELS[dedication.approval_status]}</Text>
-                  {published && <Text style={[styles.badge, styles.badgePublished]}>פורסם</Text>}
+                  <Text style={styles.badge}>{paymentStatusLabels[dedication.payment_status]}</Text>
+                  <Text style={styles.badge}>{approvalStatusLabels[dedication.approval_status]}</Text>
+                  {published && <Text style={[styles.badge, styles.badgePublished]}>{s.myDedications.published}</Text>}
                 </View>
 
                 {pendingPayment && (
@@ -123,7 +137,7 @@ export function MyDedicationsScreen({ profile }: Props) {
                         {busy ? (
                           <ActivityIndicator color={colors.onTeal} size="small" />
                         ) : (
-                          <Text style={styles.payButtonText}>שלם/י עכשיו</Text>
+                          <Text style={styles.payButtonText}>{s.myDedications.payNowButton}</Text>
                         )}
                       </GradientButton>
                     </View>
@@ -132,7 +146,7 @@ export function MyDedicationsScreen({ profile }: Props) {
                       onPress={() => handleDelete(dedication)}
                       disabled={busy}
                     >
-                      <Text style={styles.deleteButtonText}>מחק/י</Text>
+                      <Text style={styles.deleteButtonText}>{s.myDedications.deleteButton}</Text>
                     </Pressable>
                   </View>
                 )}

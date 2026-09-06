@@ -1,24 +1,15 @@
-import type { ApprovalStatus, DedicationType, PaymentStatus } from '@daily-learning/shared';
+import type { ApprovalStatus, DedicationType, Language, PaymentStatus } from '@daily-learning/shared';
 
-export const DEDICATION_TYPE_LABELS: Record<DedicationType, string> = {
-  memory: 'לעילוי נשמת',
-  healing: 'לרפואה',
-  success: 'להצלחה',
-  marriage: 'לזיווג',
-  thanks: 'הודיה',
-  other: 'אחר',
-};
+import { t } from '../i18n/strings';
 
-export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
-  pending: 'ממתין לתשלום',
-  paid: 'שולם',
-  failed: 'נכשל',
-  refunded: 'הוחזר',
-};
+export function getDedicationTypeLabels(language: Language): Record<DedicationType, string> {
+  return t(language).dedicationTypes;
+}
 
-export const APPROVAL_STATUS_LABELS: Record<ApprovalStatus, string> = {
-  pending: 'ממתין לאישור',
-  approved: 'מאושר',
-  rejected: 'נדחה',
-  hidden: 'מוסתר',
-};
+export function getPaymentStatusLabels(language: Language): Record<PaymentStatus, string> {
+  return t(language).paymentStatus;
+}
+
+export function getApprovalStatusLabels(language: Language): Record<ApprovalStatus, string> {
+  return t(language).approvalStatus;
+}

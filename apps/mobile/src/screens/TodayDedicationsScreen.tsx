@@ -4,9 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, SectionList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { t } from '../i18n/strings';
 import { fetchRecentDedications } from '../services/dedications';
 import { colors } from '../theme/colors';
-import { DEDICATION_TYPE_LABELS } from '../utils/dedicationLabels';
+import { getDedicationTypeLabels } from '../utils/dedicationLabels';
 import { isRTL } from '../utils/rtl';
 
 interface Props {
@@ -44,6 +45,8 @@ function groupByDate(dedications: Dedication[]): DateSection[] {
 
 export function TodayDedicationsScreen({ profile }: Props) {
   const rtl = isRTL(profile.language);
+  const s = t(profile.language);
+  const dedicationTypeLabels = getDedicationTypeLabels(profile.language);
   const [dedications, setDedications] = useState<Dedication[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,9 +69,9 @@ export function TodayDedicationsScreen({ profile }: Props) {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.headerRow}>
-        <Text style={[styles.title, rtl && styles.textRTL]}>הקדשות אחרונות</Text>
+        <Text style={[styles.title, rtl && styles.textRTL]}>{s.recentDedications.title}</Text>
         <Link href="/dedications/new" style={styles.newLink}>
-          <Text style={styles.newLinkText}>+ הקדש/י</Text>
+          <Text style={styles.newLinkText}>{s.recentDedications.newDedicationLink}</Text>
         </Link>
       </View>
 
@@ -82,7 +85,7 @@ export function TodayDedicationsScreen({ profile }: Props) {
         </View>
       ) : dedications.length === 0 ? (
         <View style={styles.centerFill}>
-          <Text style={[styles.emptyText, rtl && styles.textRTL]}>עדיין אין הקדשות מאושרות.</Text>
+          <Text style={[styles.emptyText, rtl && styles.textRTL]}>{s.recentDedications.emptyText}</Text>
         </View>
       ) : (
         <SectionList
@@ -99,11 +102,11 @@ export function TodayDedicationsScreen({ profile }: Props) {
           renderItem={({ item: dedication }) => (
             <View style={styles.card}>
               <Text style={[styles.cardType, rtl && styles.textRTL]}>
-                {DEDICATION_TYPE_LABELS[dedication.type]}
+                {dedicationTypeLabels[dedication.type]}
               </Text>
               <Text style={[styles.cardText, rtl && styles.textRTL]}>{dedication.dedication_text}</Text>
               <Text style={[styles.cardDonor, rtl && styles.textRTL]}>
-                {dedication.donor_name ? `מאת: ${dedication.donor_name}` : 'אנונימי'}
+                {dedication.donor_name ? s.recentDedications.donorPrefix(dedication.donor_name) : s.common.anonymous}
               </Text>
             </View>
           )}
@@ -111,7 +114,7 @@ export function TodayDedicationsScreen({ profile }: Props) {
       )}
 
       <Link href="/dedications/my" style={styles.myLink}>
-        <Text style={styles.myLinkText}>ההקדשות שלי</Text>
+        <Text style={styles.myLinkText}>{s.myDedications.title}</Text>
       </Link>
     </SafeAreaView>
   );

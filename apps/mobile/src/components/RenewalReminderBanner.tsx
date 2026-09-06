@@ -1,11 +1,14 @@
+import type { Language } from '@daily-learning/shared';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
+import { t } from '../i18n/strings';
 import { colors } from '../theme/colors';
 
 interface Props {
   daysLeft: number;
   rtl: boolean;
+  language: Language;
 }
 
 /**
@@ -16,18 +19,16 @@ interface Props {
  * this checks the same end_date live every time the app opens, regardless
  * of whether that push ever reached the user.
  */
-export function RenewalReminderBanner({ daysLeft, rtl }: Props) {
+export function RenewalReminderBanner({ daysLeft, rtl, language }: Props) {
   const router = useRouter();
+  const s = t(language).renewalReminder;
 
-  const message =
-    daysLeft <= 1
-      ? 'המנוי השנתי שלך מסתיים מחר!'
-      : `המנוי השנתי שלך מסתיים בעוד ${daysLeft} ימים.`;
+  const message = daysLeft <= 1 ? s.endingTomorrow : s.endingInDays(daysLeft);
 
   return (
     <Pressable style={styles.banner} onPress={() => router.push('/paywall')}>
       <Text style={[styles.text, rtl && styles.textRTL]}>
-        {message} <Text style={styles.link}>חדש/י עכשיו ›</Text>
+        {message} <Text style={styles.link}>{s.renewNow}</Text>
       </Text>
     </Pressable>
   );

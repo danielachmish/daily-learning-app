@@ -4,8 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAccess } from '../src/hooks/useAccess';
 import { useAuth } from '../src/hooks/useAuth';
+import { t } from '../src/i18n/strings';
 import { DailyLessonScreen } from '../src/screens/DailyLessonScreen';
 import { colors } from '../src/theme/colors';
+import { getDeviceLanguage } from '../src/utils/rtl';
 
 export default function HomeScreen() {
   const { session, profile, loading, signOut } = useAuth();
@@ -25,13 +27,14 @@ export default function HomeScreen() {
   }
 
   if (!profile) {
+    // No profile loaded yet at this point — fall back to the device's own
+    // locale, same as login.tsx.
+    const s = t(getDeviceLanguage());
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <Text style={styles.errorText}>
-          לא הצלחנו לטעון את הפרופיל שלך. נסה/י להתחבר מחדש.
-        </Text>
+        <Text style={styles.errorText}>{s.home.profileLoadError}</Text>
         <Pressable style={styles.button} onPress={signOut}>
-          <Text style={styles.buttonText}>התנתק/י</Text>
+          <Text style={styles.buttonText}>{s.blocked.signOut}</Text>
         </Pressable>
       </SafeAreaView>
     );

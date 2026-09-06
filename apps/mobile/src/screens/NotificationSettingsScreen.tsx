@@ -4,6 +4,7 @@ import { ActivityIndicator, Platform, Pressable, StyleSheet, Switch, Text, View 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TimeInput } from '../components/TimeInput';
+import { t } from '../i18n/strings';
 import { cancelReminderNotification, scheduleReminderNotification } from '../services/localNotifications';
 import { fetchNotificationSettings, saveNotificationSettings } from '../services/notifications';
 import { subscribeToWebPush, unsubscribeFromWebPush } from '../services/webPush';
@@ -33,6 +34,7 @@ function formatTimeString(date: Date): string {
 
 export function NotificationSettingsScreen({ profile }: Props) {
   const rtl = isRTL(profile.language);
+  const s = t(profile.language);
 
   const [enabled, setEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState<Date>(() => parseTimeString(null));
@@ -105,7 +107,7 @@ export function NotificationSettingsScreen({ profile }: Props) {
 
       setSaved(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'אירעה שגיאה בשמירת ההגדרות.');
+      setError(err instanceof Error ? err.message : s.notificationSettings.genericSaveError);
     } finally {
       setSaving(false);
     }
@@ -121,10 +123,10 @@ export function NotificationSettingsScreen({ profile }: Props) {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <Text style={[styles.title, rtl && styles.textRTL]}>תזכורת יומית</Text>
+      <Text style={[styles.title, rtl && styles.textRTL]}>{s.notificationSettings.title}</Text>
 
       <View style={styles.row}>
-        <Text style={[styles.label, rtl && styles.textRTL]}>הפעלת תזכורת</Text>
+        <Text style={[styles.label, rtl && styles.textRTL]}>{s.notificationSettings.enableLabel}</Text>
         <Switch
           value={enabled}
           onValueChange={(value) => {
@@ -136,7 +138,7 @@ export function NotificationSettingsScreen({ profile }: Props) {
 
       {enabled && (
         <View style={styles.timeSection}>
-          <Text style={[styles.label, rtl && styles.textRTL]}>שעת תזכורת</Text>
+          <Text style={[styles.label, rtl && styles.textRTL]}>{s.notificationSettings.timeLabel}</Text>
           <TimeInput
             value={reminderTime}
             onChange={(date) => {
@@ -148,11 +150,15 @@ export function NotificationSettingsScreen({ profile }: Props) {
       )}
 
       {error && <Text style={styles.errorText}>{error}</Text>}
-      {saved && <Text style={styles.savedText}>ההגדרות נשמרו.</Text>}
+      {saved && <Text style={styles.savedText}>{s.notificationSettings.savedText}</Text>}
       {notice && <Text style={styles.noticeText}>{notice}</Text>}
 
       <Pressable style={[styles.saveButton, saving && styles.saveButtonDisabled]} onPress={handleSave} disabled={saving}>
-        {saving ? <ActivityIndicator color={colors.onTeal} /> : <Text style={styles.saveButtonText}>שמור</Text>}
+        {saving ? (
+          <ActivityIndicator color={colors.onTeal} />
+        ) : (
+          <Text style={styles.saveButtonText}>{s.notificationSettings.saveButton}</Text>
+        )}
       </Pressable>
     </SafeAreaView>
   );

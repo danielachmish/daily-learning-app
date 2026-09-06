@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '../src/hooks/useAuth';
 import { ACCESSIBILITY_STATEMENT_URL, PRIVACY_POLICY_URL, TERMS_URL } from '../src/constants/legalUrls';
+import { t } from '../src/i18n/strings';
 import { colors } from '../src/theme/colors';
 import { isRTL } from '../src/utils/rtl';
 
@@ -18,26 +19,28 @@ import { isRTL } from '../src/utils/rtl';
  */
 export default function AboutScreen() {
   const { profile } = useAuth();
-  const rtl = isRTL(profile?.language ?? 'he');
+  const language = profile?.language ?? 'he';
+  const rtl = isRTL(language);
+  const s = t(language);
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <Text style={[styles.title, rtl && styles.textRTL]}>אודות ומידע משפטי</Text>
+      <Text style={[styles.title, rtl && styles.textRTL]}>{s.about.title}</Text>
 
       <View style={styles.linkList}>
         <Pressable style={styles.linkRow} onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}>
-          <Text style={[styles.linkText, rtl && styles.textRTL]}>מדיניות פרטיות</Text>
+          <Text style={[styles.linkText, rtl && styles.textRTL]}>{s.about.privacyPolicy}</Text>
         </Pressable>
         <Pressable style={styles.linkRow} onPress={() => Linking.openURL(TERMS_URL)}>
-          <Text style={[styles.linkText, rtl && styles.textRTL]}>תנאי שימוש</Text>
+          <Text style={[styles.linkText, rtl && styles.textRTL]}>{s.about.termsOfUse}</Text>
         </Pressable>
         <Pressable style={styles.linkRow} onPress={() => Linking.openURL(ACCESSIBILITY_STATEMENT_URL)}>
-          <Text style={[styles.linkText, rtl && styles.textRTL]}>הצהרת נגישות</Text>
+          <Text style={[styles.linkText, rtl && styles.textRTL]}>{s.about.accessibilityStatement}</Text>
         </Pressable>
       </View>
 
       <Pressable onPress={() => Linking.openURL('https://danielachmish.com')}>
-        <Text style={styles.creditText}>{'נבנה ע"י דניאל לחמיש'}</Text>
+        <Text style={styles.creditText}>{s.about.credit}</Text>
       </Pressable>
     </SafeAreaView>
   );
