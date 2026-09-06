@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { fetchTodayDedications } from '../services/dedications';
+import { fetchRecentDedications } from '../services/dedications';
 import { colors } from '../theme/colors';
 import { DEDICATION_TYPE_LABELS } from '../utils/dedicationLabels';
 import { isRTL } from '../utils/rtl';
@@ -21,7 +21,7 @@ export function TodayDedicationsScreen({ profile }: Props) {
 
   useEffect(() => {
     let isMounted = true;
-    fetchTodayDedications().then((result) => {
+    fetchRecentDedications().then((result) => {
       if (!isMounted) return;
       if (result.error) setError(result.error);
       setDedications(result.dedications);
@@ -35,7 +35,7 @@ export function TodayDedicationsScreen({ profile }: Props) {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.headerRow}>
-        <Text style={[styles.title, rtl && styles.textRTL]}>הקדשות היום</Text>
+        <Text style={[styles.title, rtl && styles.textRTL]}>הקדשות אחרונות</Text>
         <Link href="/dedications/new" style={styles.newLink}>
           <Text style={styles.newLinkText}>+ הקדש/י</Text>
         </Link>
@@ -51,7 +51,7 @@ export function TodayDedicationsScreen({ profile }: Props) {
         </View>
       ) : dedications.length === 0 ? (
         <View style={styles.centerFill}>
-          <Text style={[styles.emptyText, rtl && styles.textRTL]}>עדיין אין הקדשות מאושרות להיום.</Text>
+          <Text style={[styles.emptyText, rtl && styles.textRTL]}>עדיין אין הקדשות מאושרות.</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.list}>
@@ -61,6 +61,14 @@ export function TodayDedicationsScreen({ profile }: Props) {
                 {DEDICATION_TYPE_LABELS[dedication.type]}
               </Text>
               <Text style={[styles.cardText, rtl && styles.textRTL]}>{dedication.dedication_text}</Text>
+              {/* Dates render LTR regardless of interface language — same bidi
+                  fix as MyDedicationsScreen, otherwise a range like
+                  "2026-09-02 – 2026-10-01" visually reverses under RTL. */}
+              <Text style={styles.cardDate}>
+                {dedication.dedication_date === dedication.end_date
+                  ? dedication.dedication_date
+                  : `${dedication.dedication_date} – ${dedication.end_date}`}
+              </Text>
               <Text style={[styles.cardDonor, rtl && styles.textRTL]}>
                 {dedication.donor_name ? `מאת: ${dedication.donor_name}` : 'אנונימי'}
               </Text>
@@ -141,6 +149,11 @@ const styles = StyleSheet.create({
   cardText: {
     fontSize: 14,
     color: colors.ink700,
+  },
+  cardDate: {
+    fontSize: 12,
+    color: colors.slate300,
+    marginTop: 2,
   },
   cardDonor: {
     fontSize: 12,

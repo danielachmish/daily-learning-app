@@ -34,18 +34,23 @@ export async function fetchTodayDedicationsCount(): Promise<{ count: number; err
   return { count: count ?? 0, error: null };
 }
 
-/** Only paid + approved dedications covering today are ever shown publicly. */
-export async function fetchTodayDedications(): Promise<{ dedications: Dedication[]; error: string | null }> {
-  const today = toDateOnlyString(new Date());
-
+/**
+ * The most recent paid + approved dedications, regardless of whether their
+ * date range still covers today — a dedication for a single day used to
+ * become invisible the moment that day passed, even though it was paid
+ * and approved correctly the whole time (reported directly: "someone
+ * dedicated a day and I don't see it"). Ordered newest-covered-date first.
+ */
+export async function fetchRecentDedications(
+  limit = 30
+): Promise<{ dedications: Dedication[]; error: string | null }> {
   const { data, error } = await supabase
     .from('dedications')
     .select(DEDICATION_COLUMNS)
-    .lte('dedication_date', today)
-    .gte('end_date', today)
     .eq('payment_status', 'paid')
     .eq('approval_status', 'approved')
-    .order('created_at', { ascending: true });
+    .order('dedication_date', { ascending: false })
+    .limit(limit);
 
   if (error) return { dedications: [], error: error.message };
   return { dedications: (data as Dedication[]) ?? [], error: null };
