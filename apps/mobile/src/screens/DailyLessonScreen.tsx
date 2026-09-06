@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Linking,
   Pressable,
   ScrollView,
   Share,
@@ -240,6 +241,10 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
           </View>
 
           <StreakBadge days={profile.current_streak} />
+
+          <Pressable onPress={() => Linking.openURL('https://danielachmish.com')}>
+            <Text style={styles.creditText}>{'נבנה ע"י דניאל לחמיש'}</Text>
+          </Pressable>
         </ScrollView>
       )}
 
@@ -361,6 +366,13 @@ const styles = StyleSheet.create({
     color: colors.success,
     fontSize: 14,
     fontWeight: '600',
+  },
+  creditText: {
+    textAlign: 'center',
+    color: colors.slate300,
+    fontSize: 12,
+    marginTop: 4,
+    textDecorationLine: 'underline',
   },
   completeButton: {
     backgroundColor: colors.teal400,
