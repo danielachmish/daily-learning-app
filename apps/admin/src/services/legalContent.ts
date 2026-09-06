@@ -2,6 +2,7 @@ import { createClient as createServiceRoleClient } from '@supabase/supabase-js';
 
 export const PRIVACY_POLICY_KEY = 'privacy_policy';
 export const TERMS_OF_USE_KEY = 'terms_of_use';
+export const ACCESSIBILITY_STATEMENT_KEY = 'accessibility_statement';
 
 function requireEnvVar(name: string, value: string | undefined): string {
   if (!value) throw new Error(`Missing required environment variable: ${name}`);

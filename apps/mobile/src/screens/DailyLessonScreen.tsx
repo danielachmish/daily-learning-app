@@ -256,9 +256,14 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
         </Text>
       </Pressable>
 
-      <Pressable style={styles.signOutLink} onPress={onSignOut}>
-        <Text style={styles.signOutText}>התנתק/י</Text>
-      </Pressable>
+      <View style={styles.footerRow}>
+        <Pressable onPress={() => router.push('/about')}>
+          <Text style={styles.signOutText}>אודות ומידע משפטי</Text>
+        </Pressable>
+        <Pressable onPress={onSignOut}>
+          <Text style={styles.signOutText}>התנתק/י</Text>
+        </Pressable>
+      </View>
     </SafeAreaView>
   );
 }
@@ -399,8 +404,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  signOutLink: {
+  footerRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+    gap: 20,
     paddingVertical: 12,
     borderTopWidth: 1,
     borderTopColor: colors.line,

@@ -15,14 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LogoLockup } from '../src/components/LogoLockup';
 import { useAuth } from '../src/hooks/useAuth';
 import { colors } from '../src/theme/colors';
+import { PRIVACY_POLICY_URL, TERMS_URL } from '../src/constants/legalUrls';
 import { isRTL } from '../src/utils/rtl';
-
-// Public pages served by the admin panel (apps/admin/src/app/legal/*) —
-// no login required, since a visitor needs to be able to read these before
-// they even have an account. Content itself is edited by the org in the
-// admin panel's "מסמכים משפטיים" screen, not hardcoded here.
-const PRIVACY_POLICY_URL = 'https://daily-learning-admin-v2.netlify.app/legal/privacy';
-const TERMS_URL = 'https://daily-learning-admin-v2.netlify.app/legal/terms';
 
 export default function RegisterScreen() {
   const { session, loading: authLoading, signUp } = useAuth();
