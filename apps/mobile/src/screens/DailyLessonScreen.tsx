@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GradientButton } from '../components/GradientButton';
+import { LogoLockup } from '../components/LogoLockup';
 import { RemoteImage } from '../components/RemoteImage';
 import { RenewalReminderBanner } from '../components/RenewalReminderBanner';
 import {
@@ -179,7 +180,10 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
         >
           <Text style={styles.navButtonText}>{rtl ? '‹ אתמול' : '‹ Prev'}</Text>
         </Pressable>
-        <Text style={styles.dateText}>{selectedDate}</Text>
+        <View style={styles.dateColumn}>
+          <LogoLockup width={72} />
+          <Text style={styles.dateText}>{selectedDate}</Text>
+        </View>
         <Pressable
           style={styles.navButton}
           onPress={() => setSelectedDate((d) => addDays(d, 1))}
@@ -296,7 +300,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: colors.line,
   },
@@ -309,8 +314,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
+  dateColumn: {
+    alignItems: 'center',
+    gap: 2,
+  },
   dateText: {
-    fontSize: 12.5,
+    fontSize: 11,
     color: colors.slate300,
   },
   utilityRow: {
