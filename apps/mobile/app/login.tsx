@@ -2,6 +2,7 @@ import { Link, Redirect } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -19,6 +20,7 @@ export default function LoginScreen() {
   const { session, loading: authLoading, signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,14 +65,23 @@ export default function LoginScreen() {
         keyboardType="email-address"
         editable={!submitting}
       />
-      <TextInput
-        style={[styles.input, rtl && styles.textRTL]}
-        placeholder="סיסמה"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        editable={!submitting}
-      />
+      <View style={styles.passwordRow}>
+        <TextInput
+          style={[styles.input, styles.passwordInput, rtl && styles.textRTL]}
+          placeholder="סיסמה"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+          editable={!submitting}
+        />
+        <Pressable
+          style={[styles.eyeButton, rtl ? styles.eyeButtonRTL : styles.eyeButtonLTR]}
+          onPress={() => setShowPassword((prev) => !prev)}
+          hitSlop={8}
+        >
+          <Text style={styles.eyeButtonText}>{showPassword ? '🙈' : '👁️'}</Text>
+        </Pressable>
+      </View>
 
       {error && <Text style={[styles.errorText, rtl && styles.textRTL]}>{error}</Text>}
 
@@ -121,6 +132,28 @@ const styles = StyleSheet.create({
   textRTL: {
     writingDirection: 'rtl',
     textAlign: 'right',
+  },
+  passwordRow: {
+    justifyContent: 'center',
+  },
+  passwordInput: {
+    paddingHorizontal: 48,
+  },
+  eyeButton: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  eyeButtonLTR: {
+    right: 12,
+  },
+  eyeButtonRTL: {
+    left: 12,
+  },
+  eyeButtonText: {
+    fontSize: 18,
   },
   errorText: {
     color: colors.danger,
