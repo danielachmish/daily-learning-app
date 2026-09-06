@@ -74,12 +74,13 @@ export async function settleSubscriptionPaid(
       start_date: startDate.toISOString().slice(0, 10),
       end_date: endDate.toISOString().slice(0, 10),
       payment_provider: 'nedarim_plus',
-      // KevaId (the standing-order id) is what freeze/reactivate/cancel
-      // need — not the one-off transaction id. Falls back to the
-      // transaction id for a plain one-time charge that isn't a standing
-      // order (shouldn't normally happen for a subscription, but keeps
-      // this column non-null either way).
-      provider_subscription_id: kevaId ?? transactionId,
+      // Only a monthly plan is an actual standing order (HK) with a real
+      // KevaId to freeze/reactivate/cancel later -- yearly is billed as a
+      // one-time charge (Ragil, see create-nedarim-payment), so there's no
+      // Keva at all. Storing the one-off transaction id here instead would
+      // make the admin panel's "הקפא/בטל הוראת קבע" buttons appear for a
+      // subscription that has no recurring charge to actually manage.
+      provider_subscription_id: planType === 'monthly' ? (kevaId ?? transactionId) : null,
     })
     .select('id')
     .single();

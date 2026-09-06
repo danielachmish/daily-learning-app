@@ -172,9 +172,23 @@ Deno.serve(async (req: Request) => {
         return jsonResponse({ error: 'Subscription pricing is not configured.' }, 503);
       }
 
-      paymentType = 'HK';
+      // HK (הוראת קבע / standing order) is a MONTHLY recurring mechanism
+      // by design on Nedarim's side (and in the Israeli banking/card
+      // standing-order system generally) -- there's no such thing as an
+      // annual standing order there. A yearly plan billed as HK would
+      // charge the full yearly amount every month, not once a year. So
+      // only the monthly plan is an ongoing standing order; yearly is a
+      // one-time charge (Ragil) for the full year -- renewal after 12
+      // months needs its own separate reminder/re-charge flow, it isn't
+      // automatic the way monthly is.
+      if (body.planType === 'yearly') {
+        paymentType = 'Ragil';
+        tashlumim = '1';
+      } else {
+        paymentType = 'HK';
+        tashlumim = ''; // blank = ongoing standing order, no fixed number of charges
+      }
       amount = Number(priceSetting.value);
-      tashlumim = ''; // blank = ongoing standing order, no fixed number of charges
       comment = 'מנוי לימוד יומי';
     } else if (body.type === 'dedication') {
       if (!body.dedicationId) {
