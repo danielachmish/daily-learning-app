@@ -1,6 +1,6 @@
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useEffect, type ReactNode } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppAlertHost } from '../src/components/AppAlertHost';
@@ -59,6 +59,19 @@ export default function RootLayout() {
                   headerTintColor: colors.teal600,
                   headerStyle: { backgroundColor: colors.paper0 },
                   headerShadowVisible: false,
+                  // headerTintColor alone rendered invisible on web (arrow
+                  // came out the same color as its own background — a
+                  // react-navigation/web theming quirk, not something
+                  // reproducible to inspect further in this sandbox). A
+                  // custom headerLeft sidesteps it entirely: this Text's
+                  // color is set directly, with no theme/tint indirection
+                  // for a platform's header renderer to drop.
+                  headerLeft: ({ canGoBack }) =>
+                    canGoBack ? (
+                      <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backButton}>
+                        <Text style={styles.backButtonText}>‹</Text>
+                      </Pressable>
+                    ) : null,
                 }}
               >
                 {/* These are the app's entry/gate screens — reached via
@@ -99,5 +112,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: Platform.OS === 'web' ? 0.25 : 0,
     shadowRadius: 40,
+  },
+  backButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  backButtonText: {
+    color: colors.teal600,
+    fontSize: 28,
+    fontWeight: '700',
   },
 });
