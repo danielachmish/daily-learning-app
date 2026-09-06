@@ -66,50 +66,87 @@ export default function UsersListPage() {
       ) : users.length === 0 ? (
         <p className="text-sm text-slate-500">לא נמצאו משתמשים.</p>
       ) : (
-        <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-line text-start text-slate-500">
-              <th className="py-2 pe-4 text-start font-medium">שם מלא</th>
-              <th className="py-2 pe-4 text-start font-medium">טלפון</th>
-              <th className="py-2 pe-4 text-start font-medium">אימייל</th>
-              <th className="py-2 pe-4 text-start font-medium">מסלול</th>
-              <th className="py-2 pe-4 text-start font-medium">שפה</th>
-              <th className="py-2 pe-4 text-start font-medium">גישה חינמית</th>
-              <th className="py-2 pe-4 text-start font-medium">סטטוס</th>
-              <th className="py-2 pe-4 text-start font-medium"></th>
-            </tr>
-          </thead>
-          <tbody>
+        <>
+          {/* Desktop/tablet: full table. Below md, the 8 columns here would
+              only be reachable by horizontal scroll, so a stacked card per
+              user takes over instead (same data, no page/query change). */}
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-line text-start text-slate-500">
+                  <th className="py-2 pe-4 text-start font-medium">שם מלא</th>
+                  <th className="py-2 pe-4 text-start font-medium">טלפון</th>
+                  <th className="py-2 pe-4 text-start font-medium">אימייל</th>
+                  <th className="py-2 pe-4 text-start font-medium">מסלול</th>
+                  <th className="py-2 pe-4 text-start font-medium">שפה</th>
+                  <th className="py-2 pe-4 text-start font-medium">גישה חינמית</th>
+                  <th className="py-2 pe-4 text-start font-medium">סטטוס</th>
+                  <th className="py-2 pe-4 text-start font-medium"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((user) => (
+                  <tr key={user.id} className="border-b border-line">
+                    <td className="py-2 pe-4">{user.full_name}</td>
+                    <td className="py-2 pe-4">{user.phone ?? '—'}</td>
+                    <td className="py-2 pe-4">{user.email}</td>
+                    <td className="py-2 pe-4">{user.gender_track === 'men' ? 'גברים' : 'נשים'}</td>
+                    <td className="py-2 pe-4">{user.language === 'he' ? 'עברית' : 'English'}</td>
+                    <td className="py-2 pe-4">{user.free_access ? 'כן' : 'לא'}</td>
+                    <td className="py-2 pe-4">
+                      {user.account_status === 'blocked' ? (
+                        <span className="rounded-full bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger">
+                          חסום
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
+                          פעיל
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-2 pe-4">
+                      <Link href={`/users/${user.id}`} className="text-teal-600 hover:underline">
+                        פרטים
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="grid gap-3 md:hidden">
             {users.map((user) => (
-              <tr key={user.id} className="border-b border-line">
-                <td className="py-2 pe-4">{user.full_name}</td>
-                <td className="py-2 pe-4">{user.phone ?? '—'}</td>
-                <td className="py-2 pe-4">{user.email}</td>
-                <td className="py-2 pe-4">{user.gender_track === 'men' ? 'גברים' : 'נשים'}</td>
-                <td className="py-2 pe-4">{user.language === 'he' ? 'עברית' : 'English'}</td>
-                <td className="py-2 pe-4">{user.free_access ? 'כן' : 'לא'}</td>
-                <td className="py-2 pe-4">
+              <Link
+                key={user.id}
+                href={`/users/${user.id}`}
+                className="rounded-2xl border border-line bg-paper-50 p-4"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate font-bold text-ink-900">{user.full_name}</p>
+                    <p className="truncate text-sm text-slate-500">{user.email}</p>
+                  </div>
                   {user.account_status === 'blocked' ? (
-                    <span className="rounded-full bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger">
+                    <span className="shrink-0 rounded-full bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger">
                       חסום
                     </span>
                   ) : (
-                    <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
+                    <span className="shrink-0 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
                       פעיל
                     </span>
                   )}
-                </td>
-                <td className="py-2 pe-4">
-                  <Link href={`/users/${user.id}`} className="text-teal-600 hover:underline">
-                    פרטים
-                  </Link>
-                </td>
-              </tr>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                  <span>{user.phone ?? '—'}</span>
+                  <span>{user.gender_track === 'men' ? 'גברים' : 'נשים'}</span>
+                  <span>{user.language === 'he' ? 'עברית' : 'English'}</span>
+                  {user.free_access && <span className="font-medium text-teal-600">גישה חינמית</span>}
+                </div>
+              </Link>
             ))}
-          </tbody>
-        </table>
-        </div>
+          </div>
+        </>
       )}
 
       {totalCount > 0 && (

@@ -132,66 +132,68 @@ export default function DedicationsListPage() {
       ) : dedications.length === 0 ? (
         <p className="text-sm text-slate-500">לא נמצאו הקדשות.</p>
       ) : (
-        <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-line text-start text-slate-500">
-              <th className="py-2 pe-4 text-start font-medium">תאריך</th>
-              <th className="py-2 pe-4 text-start font-medium">סוג</th>
-              <th className="py-2 pe-4 text-start font-medium">נוסח</th>
-              <th className="py-2 pe-4 text-start font-medium">תשלום</th>
-              <th className="py-2 pe-4 text-start font-medium">אישור</th>
-              <th className="py-2 pe-4 text-start font-medium">פעולות</th>
-            </tr>
-          </thead>
-          <tbody>
+        <>
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-line text-start text-slate-500">
+                  <th className="py-2 pe-4 text-start font-medium">תאריך</th>
+                  <th className="py-2 pe-4 text-start font-medium">סוג</th>
+                  <th className="py-2 pe-4 text-start font-medium">נוסח</th>
+                  <th className="py-2 pe-4 text-start font-medium">תשלום</th>
+                  <th className="py-2 pe-4 text-start font-medium">אישור</th>
+                  <th className="py-2 pe-4 text-start font-medium">פעולות</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dedications.map((dedication) => (
+                  <tr key={dedication.id} className="border-b border-line">
+                    <td className="py-2 pe-4">{dedication.dedication_date}</td>
+                    <td className="py-2 pe-4">{DEDICATION_TYPE_LABELS[dedication.type]}</td>
+                    <td className="max-w-xs truncate py-2 pe-4">{dedication.dedication_text}</td>
+                    <td className="py-2 pe-4">{PAYMENT_STATUS_LABELS[dedication.payment_status]}</td>
+                    <td className="py-2 pe-4">{APPROVAL_STATUS_LABELS[dedication.approval_status]}</td>
+                    <td className="py-2 pe-4">
+                      <DedicationActions
+                        dedication={dedication}
+                        busy={busyId === dedication.id}
+                        onAction={(action) => handleAction(dedication, action)}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="grid gap-3 md:hidden">
             {dedications.map((dedication) => (
-              <tr key={dedication.id} className="border-b border-line">
-                <td className="py-2 pe-4">{dedication.dedication_date}</td>
-                <td className="py-2 pe-4">{DEDICATION_TYPE_LABELS[dedication.type]}</td>
-                <td className="max-w-xs truncate py-2 pe-4">{dedication.dedication_text}</td>
-                <td className="py-2 pe-4">{PAYMENT_STATUS_LABELS[dedication.payment_status]}</td>
-                <td className="py-2 pe-4">{APPROVAL_STATUS_LABELS[dedication.approval_status]}</td>
-                <td className="flex flex-wrap gap-3 py-2 pe-4">
-                  <Link
-                    href={`/dedications/${dedication.id}`}
-                    className="text-teal-600 hover:underline"
-                  >
+              <div key={dedication.id} className="rounded-2xl border border-line bg-paper-50 p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-bold text-ink-900">{DEDICATION_TYPE_LABELS[dedication.type]}</p>
+                    <p className="text-xs text-slate-300">{dedication.dedication_date}</p>
+                  </div>
+                </div>
+                <p className="mt-2 line-clamp-2 text-sm text-ink-700">{dedication.dedication_text}</p>
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                  <span>{PAYMENT_STATUS_LABELS[dedication.payment_status]}</span>
+                  <span>{APPROVAL_STATUS_LABELS[dedication.approval_status]}</span>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-line pt-3 text-sm">
+                  <Link href={`/dedications/${dedication.id}`} className="text-teal-600 hover:underline">
                     פרטים
                   </Link>
-                  {dedication.approval_status !== 'approved' && (
-                    <button
-                      onClick={() => handleAction(dedication, approveDedication)}
-                      disabled={busyId === dedication.id}
-                      className="text-success hover:underline"
-                    >
-                      אישור
-                    </button>
-                  )}
-                  {dedication.approval_status !== 'rejected' && (
-                    <button
-                      onClick={() => handleAction(dedication, rejectDedication)}
-                      disabled={busyId === dedication.id}
-                      className="text-danger hover:underline"
-                    >
-                      דחייה
-                    </button>
-                  )}
-                  {dedication.approval_status !== 'hidden' && (
-                    <button
-                      onClick={() => handleAction(dedication, hideDedication)}
-                      disabled={busyId === dedication.id}
-                      className="text-slate-500 hover:underline"
-                    >
-                      הסתרה
-                    </button>
-                  )}
-                </td>
-              </tr>
+                  <DedicationActions
+                    dedication={dedication}
+                    busy={busyId === dedication.id}
+                    onAction={(action) => handleAction(dedication, action)}
+                  />
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
-        </div>
+          </div>
+        </>
       )}
 
       {totalCount > 0 && (
@@ -214,6 +216,41 @@ export default function DedicationsListPage() {
             הבא
           </button>
         </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The approve/reject/hide buttons are identical in the desktop table cell
+ * and the mobile card — extracted so they're defined once instead of
+ * duplicated between the two layouts.
+ */
+function DedicationActions({
+  dedication,
+  busy,
+  onAction,
+}: {
+  dedication: Dedication;
+  busy: boolean;
+  onAction: (action: (supabase: ReturnType<typeof createClient>, id: string) => ReturnType<typeof approveDedication>) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-3">
+      {dedication.approval_status !== 'approved' && (
+        <button onClick={() => onAction(approveDedication)} disabled={busy} className="text-success hover:underline">
+          אישור
+        </button>
+      )}
+      {dedication.approval_status !== 'rejected' && (
+        <button onClick={() => onAction(rejectDedication)} disabled={busy} className="text-danger hover:underline">
+          דחייה
+        </button>
+      )}
+      {dedication.approval_status !== 'hidden' && (
+        <button onClick={() => onAction(hideDedication)} disabled={busy} className="text-slate-500 hover:underline">
+          הסתרה
+        </button>
       )}
     </div>
   );

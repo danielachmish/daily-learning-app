@@ -174,62 +174,62 @@ export default function LessonsListPage() {
       ) : lessons.length === 0 ? (
         <p className="text-sm text-slate-500">לא נמצאו לימודים.</p>
       ) : (
-        <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-line text-start text-slate-500">
-              <th className="py-2 pe-4 text-start font-medium">תאריך</th>
-              <th className="py-2 pe-4 text-start font-medium">כותרת</th>
-              <th className="py-2 pe-4 text-start font-medium">מסלול</th>
-              <th className="py-2 pe-4 text-start font-medium">שפה</th>
-              <th className="py-2 pe-4 text-start font-medium">סטטוס</th>
-              <th className="py-2 pe-4 text-start font-medium">פעולות</th>
-            </tr>
-          </thead>
-          <tbody>
+        <>
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-line text-start text-slate-500">
+                  <th className="py-2 pe-4 text-start font-medium">תאריך</th>
+                  <th className="py-2 pe-4 text-start font-medium">כותרת</th>
+                  <th className="py-2 pe-4 text-start font-medium">מסלול</th>
+                  <th className="py-2 pe-4 text-start font-medium">שפה</th>
+                  <th className="py-2 pe-4 text-start font-medium">סטטוס</th>
+                  <th className="py-2 pe-4 text-start font-medium">פעולות</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lessons.map((lesson) => (
+                  <tr key={lesson.id} className="border-b border-line">
+                    <td className="py-2 pe-4">{lesson.lesson_date}</td>
+                    <td className="py-2 pe-4">{lesson.title}</td>
+                    <td className="py-2 pe-4">{lesson.gender_track === 'men' ? 'גברים' : 'נשים'}</td>
+                    <td className="py-2 pe-4">{lesson.language === 'he' ? 'עברית' : 'English'}</td>
+                    <td className="py-2 pe-4">
+                      <PublishToggle lesson={lesson} busy={busyId === lesson.id} onToggle={handleTogglePublish} />
+                    </td>
+                    <td className="flex gap-3 py-2 pe-4">
+                      <LessonActions lesson={lesson} busy={busyId === lesson.id} onDuplicate={handleDuplicate} onDelete={handleDelete} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="grid gap-3 md:hidden">
             {lessons.map((lesson) => (
-              <tr key={lesson.id} className="border-b border-line">
-                <td className="py-2 pe-4">{lesson.lesson_date}</td>
-                <td className="py-2 pe-4">{lesson.title}</td>
-                <td className="py-2 pe-4">{lesson.gender_track === 'men' ? 'גברים' : 'נשים'}</td>
-                <td className="py-2 pe-4">{lesson.language === 'he' ? 'עברית' : 'English'}</td>
-                <td className="py-2 pe-4">
-                  <button
-                    onClick={() => handleTogglePublish(lesson)}
-                    disabled={busyId === lesson.id}
-                    className={
-                      lesson.status === 'published'
-                        ? 'rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success'
-                        : 'rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-500'
-                    }
-                  >
-                    {lesson.status === 'published' ? 'פורסם' : 'טיוטה'}
-                  </button>
-                </td>
-                <td className="flex gap-3 py-2 pe-4">
+              <div key={lesson.id} className="rounded-2xl border border-line bg-paper-50 p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate font-bold text-ink-900">{lesson.title}</p>
+                    <p className="text-xs text-slate-300">{lesson.lesson_date}</p>
+                  </div>
+                  <PublishToggle lesson={lesson} busy={busyId === lesson.id} onToggle={handleTogglePublish} />
+                </div>
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                  <span>{lesson.gender_track === 'men' ? 'גברים' : 'נשים'}</span>
+                  <span>{lesson.language === 'he' ? 'עברית' : 'English'}</span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-3 border-t border-line pt-3 text-sm">
                   <Link href={`/lessons/${lesson.id}/edit`} className="text-teal-600 hover:underline">
                     עריכה
                   </Link>
-                  <button
-                    onClick={() => handleDuplicate(lesson)}
-                    disabled={busyId === lesson.id}
-                    className="text-teal-600 hover:underline"
-                  >
-                    שכפול
-                  </button>
-                  <button
-                    onClick={() => handleDelete(lesson)}
-                    disabled={busyId === lesson.id}
-                    className="text-danger hover:underline"
-                  >
-                    מחיקה
-                  </button>
-                </td>
-              </tr>
+                  <LessonActions lesson={lesson} busy={busyId === lesson.id} onDuplicate={handleDuplicate} onDelete={handleDelete} />
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
-        </div>
+          </div>
+        </>
       )}
 
       {totalCount > 0 && (
@@ -254,5 +254,54 @@ export default function LessonsListPage() {
         </div>
       )}
     </div>
+  );
+}
+
+/** Shared between the desktop table cell and the mobile card. */
+function PublishToggle({
+  lesson,
+  busy,
+  onToggle,
+}: {
+  lesson: Lesson;
+  busy: boolean;
+  onToggle: (lesson: Lesson) => void;
+}) {
+  return (
+    <button
+      onClick={() => onToggle(lesson)}
+      disabled={busy}
+      className={
+        lesson.status === 'published'
+          ? 'shrink-0 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success'
+          : 'shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-500'
+      }
+    >
+      {lesson.status === 'published' ? 'פורסם' : 'טיוטה'}
+    </button>
+  );
+}
+
+/** Shared between the desktop table cell and the mobile card. */
+function LessonActions({
+  lesson,
+  busy,
+  onDuplicate,
+  onDelete,
+}: {
+  lesson: Lesson;
+  busy: boolean;
+  onDuplicate: (lesson: Lesson) => void;
+  onDelete: (lesson: Lesson) => void;
+}) {
+  return (
+    <>
+      <button onClick={() => onDuplicate(lesson)} disabled={busy} className="text-teal-600 hover:underline">
+        שכפול
+      </button>
+      <button onClick={() => onDelete(lesson)} disabled={busy} className="text-danger hover:underline">
+        מחיקה
+      </button>
+    </>
   );
 }

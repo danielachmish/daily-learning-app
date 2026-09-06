@@ -153,74 +153,94 @@ export default function SubscriptionsListPage() {
       ) : subscriptions.length === 0 ? (
         <p className="text-sm text-slate-500">לא נמצאו מנויים.</p>
       ) : (
-        <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-line text-start text-slate-500">
-              <th className="py-2 pe-4 text-start font-medium">משתמש</th>
-              <th className="py-2 pe-4 text-start font-medium">תוכנית</th>
-              <th className="py-2 pe-4 text-start font-medium">סטטוס</th>
-              <th className="py-2 pe-4 text-start font-medium">תוקף עד</th>
-              <th className="py-2 pe-4 text-start font-medium">פעולות</th>
-            </tr>
-          </thead>
-          <tbody>
+        <>
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-line text-start text-slate-500">
+                  <th className="py-2 pe-4 text-start font-medium">משתמש</th>
+                  <th className="py-2 pe-4 text-start font-medium">תוכנית</th>
+                  <th className="py-2 pe-4 text-start font-medium">סטטוס</th>
+                  <th className="py-2 pe-4 text-start font-medium">תוקף עד</th>
+                  <th className="py-2 pe-4 text-start font-medium">פעולות</th>
+                </tr>
+              </thead>
+              <tbody>
+                {subscriptions.map((subscription) => (
+                  <tr key={subscription.id} className="border-b border-line">
+                    <td className="py-2 pe-4">
+                      {subscription.profiles?.full_name ?? '—'}
+                      <div className="text-xs text-slate-300">{subscription.profiles?.email}</div>
+                    </td>
+                    <td className="py-2 pe-4">{subscription.plan_type === 'monthly' ? 'חודשי' : 'שנתי'}</td>
+                    <td className="py-2 pe-4">
+                      {subscription.status}
+                      {subscription.keva_frozen_at && (
+                        <span className="ms-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+                          הוראת קבע מוקפאת
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-2 pe-4">{subscription.end_date}</td>
+                    <td className="py-2 pe-4">
+                      <SubscriptionActions
+                        subscription={subscription}
+                        extendDate={extendDates[subscription.id] ?? ''}
+                        busy={busyId === subscription.id}
+                        isNedarim={isNedarim(subscription)}
+                        onExtendDateChange={(value) =>
+                          setExtendDates((prev) => ({ ...prev, [subscription.id]: value }))
+                        }
+                        onExtend={() => handleExtend(subscription)}
+                        onFreezeToggle={() => handleFreezeToggle(subscription)}
+                        onCancel={() => handleCancel(subscription)}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="grid gap-3 md:hidden">
             {subscriptions.map((subscription) => (
-              <tr key={subscription.id} className="border-b border-line">
-                <td className="py-2 pe-4">
-                  {subscription.profiles?.full_name ?? '—'}
-                  <div className="text-xs text-slate-300">{subscription.profiles?.email}</div>
-                </td>
-                <td className="py-2 pe-4">{subscription.plan_type === 'monthly' ? 'חודשי' : 'שנתי'}</td>
-                <td className="py-2 pe-4">
-                  {subscription.status}
+              <div key={subscription.id} className="rounded-2xl border border-line bg-paper-50 p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate font-bold text-ink-900">{subscription.profiles?.full_name ?? '—'}</p>
+                    <p className="truncate text-sm text-slate-500">{subscription.profiles?.email}</p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-teal-100 px-2 py-0.5 text-xs font-medium text-teal-600">
+                    {subscription.plan_type === 'monthly' ? 'חודשי' : 'שנתי'}
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+                  <span>{subscription.status}</span>
+                  <span>תוקף עד {subscription.end_date}</span>
                   {subscription.keva_frozen_at && (
-                    <span className="ms-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-500">
                       הוראת קבע מוקפאת
                     </span>
                   )}
-                </td>
-                <td className="py-2 pe-4">{subscription.end_date}</td>
-                <td className="py-2 pe-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <input
-                      type="date"
-                      value={extendDates[subscription.id] ?? ''}
-                      onChange={(e) =>
-                        setExtendDates((prev) => ({ ...prev, [subscription.id]: e.target.value }))
-                      }
-                      className="rounded-lg border border-line bg-paper-50 px-2 py-1 text-xs text-ink-900"
-                    />
-                    <button
-                      onClick={() => handleExtend(subscription)}
-                      disabled={busyId === subscription.id}
-                      className="text-teal-600 hover:underline"
-                    >
-                      הארך
-                    </button>
-                    {isNedarim(subscription) && subscription.status !== 'canceled' && (
-                      <button
-                        onClick={() => handleFreezeToggle(subscription)}
-                        disabled={busyId === subscription.id}
-                        className="text-slate-500 hover:underline disabled:opacity-40"
-                      >
-                        {subscription.keva_frozen_at ? 'הפעל מחדש' : 'הקפא הוראת קבע'}
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleCancel(subscription)}
-                      disabled={busyId === subscription.id || subscription.status === 'canceled'}
-                      className="text-danger hover:underline disabled:opacity-40"
-                    >
-                      {isNedarim(subscription) ? 'בטל הוראת קבע' : 'בטל'}
-                    </button>
-                  </div>
-                </td>
-              </tr>
+                </div>
+                <div className="mt-3 border-t border-line pt-3">
+                  <SubscriptionActions
+                    subscription={subscription}
+                    extendDate={extendDates[subscription.id] ?? ''}
+                    busy={busyId === subscription.id}
+                    isNedarim={isNedarim(subscription)}
+                    onExtendDateChange={(value) =>
+                      setExtendDates((prev) => ({ ...prev, [subscription.id]: value }))
+                    }
+                    onExtend={() => handleExtend(subscription)}
+                    onFreezeToggle={() => handleFreezeToggle(subscription)}
+                    onCancel={() => handleCancel(subscription)}
+                  />
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
-        </div>
+          </div>
+        </>
       )}
 
       {totalCount > 0 && (
@@ -244,6 +264,57 @@ export default function SubscriptionsListPage() {
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * The action row (extend-date picker + extend/freeze/cancel buttons) is
+ * identical in the desktop table cell and the mobile card — extracted so
+ * it's defined once instead of duplicated between the two layouts.
+ */
+function SubscriptionActions({
+  subscription,
+  extendDate,
+  busy,
+  isNedarim,
+  onExtendDateChange,
+  onExtend,
+  onFreezeToggle,
+  onCancel,
+}: {
+  subscription: SubscriptionRow;
+  extendDate: string;
+  busy: boolean;
+  isNedarim: boolean;
+  onExtendDateChange: (value: string) => void;
+  onExtend: () => void;
+  onFreezeToggle: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <input
+        type="date"
+        value={extendDate}
+        onChange={(e) => onExtendDateChange(e.target.value)}
+        className="rounded-lg border border-line bg-paper-50 px-2 py-1 text-xs text-ink-900"
+      />
+      <button onClick={onExtend} disabled={busy} className="text-teal-600 hover:underline">
+        הארך
+      </button>
+      {isNedarim && subscription.status !== 'canceled' && (
+        <button onClick={onFreezeToggle} disabled={busy} className="text-slate-500 hover:underline disabled:opacity-40">
+          {subscription.keva_frozen_at ? 'הפעל מחדש' : 'הקפא הוראת קבע'}
+        </button>
+      )}
+      <button
+        onClick={onCancel}
+        disabled={busy || subscription.status === 'canceled'}
+        className="text-danger hover:underline disabled:opacity-40"
+      >
+        {isNedarim ? 'בטל הוראת קבע' : 'בטל'}
+      </button>
     </div>
   );
 }
