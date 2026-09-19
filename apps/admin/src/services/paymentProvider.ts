@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { logActivity } from './activityLog';
+
 interface Result<T> {
   data: T | null;
   error: string | null;
@@ -53,6 +55,15 @@ export async function saveNedarimSettings(
     { key: API_VALID_KEY, value: settings.apiValid, updated_at: new Date().toISOString() },
     { key: API_KEY_KEY, value: settings.apiKey, updated_at: new Date().toISOString() },
   ]);
+
+  // Deliberately no secret values in metadata here — never write API
+  // keys/secrets into the activity log, even though it's admin-only.
+  await logActivity(supabase, {
+    action: 'settings.save_nedarim',
+    entityType: 'settings',
+    status: error ? 'error' : 'success',
+    message: error?.message ?? null,
+  });
 
   if (error) return { error: error.message };
   return { error: null };

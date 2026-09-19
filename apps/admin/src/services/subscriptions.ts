@@ -1,6 +1,9 @@
 import type { PlanType, Subscription, SubscriptionStatus } from '@daily-learning/shared';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { logActivity } from './activityLog';
+import { createClient } from './supabase/client';
+
 export const SUBSCRIPTIONS_PAGE_SIZE = 20;
 
 export interface SubscriptionFilters {
@@ -59,11 +62,26 @@ export async function extendSubscription(
     .from('subscriptions')
     .update({ end_date: newEndDate, status: 'active' })
     .eq('id', id);
+  await logActivity(supabase, {
+    action: 'subscription.extend',
+    entityType: 'subscription',
+    entityId: id,
+    status: error ? 'error' : 'success',
+    message: error?.message ?? null,
+    metadata: { newEndDate },
+  });
   return { error: error?.message ?? null };
 }
 
 export async function cancelSubscription(supabase: SupabaseClient, id: string): Promise<{ error: string | null }> {
   const { error } = await supabase.from('subscriptions').update({ status: 'canceled' }).eq('id', id);
+  await logActivity(supabase, {
+    action: 'subscription.cancel',
+    entityType: 'subscription',
+    entityId: id,
+    status: error ? 'error' : 'success',
+    message: error?.message ?? null,
+  });
   return { error: error?.message ?? null };
 }
 
@@ -78,6 +96,7 @@ export async function manageNedarimKeva(
   subscriptionId: string,
   action: 'freeze' | 'reactivate' | 'cancel'
 ): Promise<{ error: string | null }> {
+  const supabase = createClient();
   try {
     const resp = await fetch('/api/subscriptions/keva', {
       method: 'POST',
@@ -85,9 +104,24 @@ export async function manageNedarimKeva(
       body: JSON.stringify({ subscriptionId, action }),
     });
     const data = await resp.json();
-    if (!resp.ok) return { error: data.error ?? 'הפעולה נכשלה.' };
-    return { error: null };
+    const error = !resp.ok ? (data.error ?? 'הפעולה נכשלה.') : null;
+    await logActivity(supabase, {
+      action: `subscription.nedarim_${action}`,
+      entityType: 'subscription',
+      entityId: subscriptionId,
+      status: error ? 'error' : 'success',
+      message: error,
+    });
+    return { error };
   } catch {
-    return { error: 'שגיאת תקשורת.' };
+    const error = 'שגיאת תקשורת.';
+    await logActivity(supabase, {
+      action: `subscription.nedarim_${action}`,
+      entityType: 'subscription',
+      entityId: subscriptionId,
+      status: 'error',
+      message: error,
+    });
+    return { error };
   }
 }

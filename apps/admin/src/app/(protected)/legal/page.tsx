@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { ACCESSIBILITY_STATEMENT_KEY, PRIVACY_POLICY_KEY, TERMS_OF_USE_KEY } from '../../../services/legalContent';
+import { logActivity } from '../../../services/activityLog';
 import { createClient } from '../../../services/supabase/client';
 
 // Starter draft, not a certified compliance claim — Israeli accessibility
@@ -67,6 +68,13 @@ export default function LegalContentPage() {
       { key: TERMS_OF_USE_KEY, value: termsOfUse, updated_at: new Date().toISOString() },
       { key: ACCESSIBILITY_STATEMENT_KEY, value: accessibilityStatement, updated_at: new Date().toISOString() },
     ]);
+
+    await logActivity(supabase, {
+      action: 'settings.save_legal_content',
+      entityType: 'settings',
+      status: saveError ? 'error' : 'success',
+      message: saveError?.message ?? null,
+    });
 
     setSaving(false);
     if (saveError) {

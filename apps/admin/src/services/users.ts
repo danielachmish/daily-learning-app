@@ -1,6 +1,8 @@
 import type { AccountStatus, GenderTrack, Language, UserProfile } from '@daily-learning/shared';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { logActivity } from './activityLog';
+
 export const USERS_PAGE_SIZE = 20;
 
 export interface PagedUsers {
@@ -58,6 +60,14 @@ export async function updateUserTrackAndLanguage(
     .from('profiles')
     .update({ gender_track: genderTrack, language })
     .eq('id', id);
+  await logActivity(supabase, {
+    action: 'user.update_track_language',
+    entityType: 'user',
+    entityId: id,
+    status: error ? 'error' : 'success',
+    message: error?.message ?? null,
+    metadata: { genderTrack, language },
+  });
   return { error: error?.message ?? null };
 }
 
@@ -68,6 +78,14 @@ export async function setFreeAccess(
   freeAccess: boolean
 ): Promise<{ error: string | null }> {
   const { error } = await supabase.rpc('admin_set_free_access', { p_user_id: id, p_free_access: freeAccess });
+  await logActivity(supabase, {
+    action: 'user.set_free_access',
+    entityType: 'user',
+    entityId: id,
+    status: error ? 'error' : 'success',
+    message: error?.message ?? null,
+    metadata: { freeAccess },
+  });
   return { error: error?.message ?? null };
 }
 
@@ -78,6 +96,14 @@ export async function setAccountStatus(
   status: AccountStatus
 ): Promise<{ error: string | null }> {
   const { error } = await supabase.rpc('admin_set_account_status', { p_user_id: id, p_account_status: status });
+  await logActivity(supabase, {
+    action: 'user.set_account_status',
+    entityType: 'user',
+    entityId: id,
+    status: error ? 'error' : 'success',
+    message: error?.message ?? null,
+    metadata: { accountStatus: status },
+  });
   return { error: error?.message ?? null };
 }
 
@@ -88,5 +114,13 @@ export async function setRole(
   role: 'user' | 'admin'
 ): Promise<{ error: string | null }> {
   const { error } = await supabase.rpc('admin_set_role', { p_user_id: id, p_role: role });
+  await logActivity(supabase, {
+    action: 'user.set_role',
+    entityType: 'user',
+    entityId: id,
+    status: error ? 'error' : 'success',
+    message: error?.message ?? null,
+    metadata: { role },
+  });
   return { error: error?.message ?? null };
 }

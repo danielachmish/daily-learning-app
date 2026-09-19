@@ -1,6 +1,7 @@
 'use client';
 
 import type { GenderTrack, Language } from '@daily-learning/shared';
+import Link from 'next/link';
 import { useRef, useState } from 'react';
 
 import {
@@ -10,7 +11,7 @@ import {
   renderPageToFile,
   type DetectedDay,
 } from '../../../../services/pdfImport';
-import { createLesson, uploadLessonImage } from '../../../../services/lessons';
+import { createLesson, fetchLessonByDate, fetchLessonImages, uploadLessonImage } from '../../../../services/lessons';
 import { createClient } from '../../../../services/supabase/client';
 
 type Phase = 'select' | 'detecting' | 'preview' | 'importing' | 'done';
@@ -34,6 +35,8 @@ export default function ImportLessonsPage() {
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<string>('');
   const [results, setResults] = useState<DayResult[]>([]);
+  const [batchTotal, setBatchTotal] = useState(0);
+  const [batchDone, setBatchDone] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleDetect() {
@@ -53,13 +56,39 @@ export default function ImportLessonsPage() {
     }
   }
 
-  async function handleImport() {
-    if (!pdf) return;
-    setPhase('importing');
-    const supabase = createClient();
-    const collected: DayResult[] = [];
+  /**
+   * Processes one day: create the lesson (or, on a retry, resume the one
+   * already created from a previous partial attempt), then upload
+   * whichever pages aren't already there. Checking for an existing lesson
+   * FIRST — rather than always calling createLesson — is what makes
+   * "retry failed days" actually recover a day that got as far as
+   * creating the lesson row before its image upload failed: without this,
+   * a retry would just hit the unique-date conflict and stop, leaving the
+   * lesson permanently short a page with no way to notice.
+   *
+   * createLesson and uploadLessonImage already retry transient failures a
+   * couple of times on their own (services/retry.ts), so reaching an
+   * error here means it genuinely didn't recover, not just a single blip.
+   */
+  async function processDay(
+    supabase: ReturnType<typeof createClient>,
+    day: DetectedDay
+  ): Promise<DayResult> {
+    setProgress(`${day.dateLabel} — בודק אם הלימוד כבר קיים…`);
+    const existing = await fetchLessonByDate(supabase, day.isoDate, track, language);
+    if (existing.error) {
+      return { day, outcome: 'error', message: existing.error };
+    }
 
-    for (const day of days) {
+    let lessonId: string;
+    let alreadyUploaded = 0;
+
+    if (existing.data) {
+      lessonId = existing.data.id;
+      const { images, error: imagesError } = await fetchLessonImages(supabase, lessonId);
+      if (imagesError) return { day, outcome: 'error', message: imagesError };
+      alreadyUploaded = images.length;
+    } else {
       setProgress(`${day.dateLabel} — יוצר לימוד…`);
       const created = await createLesson(supabase, {
         lessonDate: day.isoDate,
@@ -69,39 +98,74 @@ export default function ImportLessonsPage() {
         language,
         status: 'draft',
       });
-
+      // The unique-date conflict is kept as a defensive fallback (e.g. a
+      // race between two people importing at once) even though the
+      // existence check above handles the normal retry case.
       if (created.error) {
-        collected.push({
+        return {
           day,
           outcome: created.error === ALREADY_EXISTS_MESSAGE ? 'skipped' : 'error',
           message: created.error,
-        });
-        setResults([...collected]);
-        continue;
+        };
       }
+      lessonId = created.data!.id;
+    }
 
-      const lessonId = created.data!.id;
-      for (let i = 0; i < day.pageNumbers.length; i++) {
-        setProgress(`${day.dateLabel} — מעלה עמוד ${i + 1} מתוך ${day.pageNumbers.length}…`);
-        const pageFile = await renderPageToFile(pdf, day.pageNumbers[i], `${day.isoDate}-page-${i + 1}.png`);
-        const uploadResult = await uploadLessonImage(supabase, lessonId, pageFile);
-        if (uploadResult.error) {
-          collected.push({ day, outcome: 'error', message: uploadResult.error });
-          setResults([...collected]);
-          break;
-        }
-      }
-      if (!collected.some((r) => r.day === day)) {
-        collected.push({ day, outcome: 'created' });
-        setResults([...collected]);
+    if (alreadyUploaded >= day.pageNumbers.length) {
+      return { day, outcome: 'skipped', message: 'כל העמודים כבר הועלו.' };
+    }
+
+    for (let i = alreadyUploaded; i < day.pageNumbers.length; i++) {
+      setProgress(`${day.dateLabel} — מעלה עמוד ${i + 1} מתוך ${day.pageNumbers.length}…`);
+      const pageFile = await renderPageToFile(pdf!, day.pageNumbers[i], `${day.isoDate}-page-${i + 1}.png`);
+      const uploadResult = await uploadLessonImage(supabase, lessonId, pageFile);
+      if (uploadResult.error) {
+        return { day, outcome: 'error', message: uploadResult.error };
       }
     }
 
+    return {
+      day,
+      outcome: 'created',
+      message: alreadyUploaded > 0 ? `הושלמו ${day.pageNumbers.length - alreadyUploaded} עמודים חסרים.` : undefined,
+    };
+  }
+
+  /**
+   * Runs processDay for a set of days and merges each outcome into
+   * `results` as it completes (by isoDate, so a retry replaces the day's
+   * previous failed entry instead of appending a duplicate).
+   */
+  async function processDays(daysToProcess: DetectedDay[]) {
+    const supabase = createClient();
+    setBatchTotal(daysToProcess.length);
+    setBatchDone(0);
+    for (const day of daysToProcess) {
+      const result = await processDay(supabase, day);
+      setResults((prev) => [...prev.filter((r) => r.day.isoDate !== day.isoDate), result]);
+      setBatchDone((n) => n + 1);
+    }
     setProgress('');
+  }
+
+  async function handleImport() {
+    if (!pdf) return;
+    setPhase('importing');
+    setResults([]);
+    await processDays(days);
+    setPhase('done');
+  }
+
+  async function handleRetryFailed() {
+    const failedDays = results.filter((r) => r.outcome === 'error').map((r) => r.day);
+    if (failedDays.length === 0) return;
+    setPhase('importing');
+    await processDays(failedDays);
     setPhase('done');
   }
 
   const warnings = days.filter((d) => d.pageNumbers.length > DAY_PAGE_COUNT_WARNING_THRESHOLD);
+  const failedCount = results.filter((r) => r.outcome === 'error').length;
 
   return (
     <div className="max-w-2xl">
@@ -230,7 +294,7 @@ export default function ImportLessonsPage() {
         <div>
           <p className="mb-3 text-sm text-slate-500">{progress}</p>
           <p className="text-sm text-ink-700">
-            הושלמו {results.length} מתוך {days.length}…
+            הושלמו {batchDone} מתוך {batchTotal}…
           </p>
         </div>
       )}
@@ -241,9 +305,15 @@ export default function ImportLessonsPage() {
           <ul className="space-y-1 text-sm">
             {results.map((r) => (
               <li key={r.day.isoDate}>
-                {r.outcome === 'created' && <span className="text-success">✓ {r.day.dateLabel} — נוצר כטיוטה</span>}
+                {r.outcome === 'created' && (
+                  <span className="text-success">
+                    ✓ {r.day.dateLabel} — {r.message ? r.message : 'נוצר כטיוטה'}
+                  </span>
+                )}
                 {r.outcome === 'skipped' && (
-                  <span className="text-slate-500">— {r.day.dateLabel} — דולג (כבר קיים)</span>
+                  <span className="text-slate-500">
+                    — {r.day.dateLabel} — {r.message ?? 'דולג (כבר קיים)'}
+                  </span>
                 )}
                 {r.outcome === 'error' && (
                   <span className="text-danger">
@@ -253,6 +323,26 @@ export default function ImportLessonsPage() {
               </li>
             ))}
           </ul>
+
+          {failedCount > 0 && (
+            <div className="mt-4 rounded-xl border border-danger/30 bg-danger/5 p-3">
+              <p className="text-sm text-ink-700">
+                {failedCount} {failedCount === 1 ? 'יום נכשל' : 'ימים נכשלו'} — כל כישלון נרשם גם
+                ב<Link href="/logs" className="text-teal-600 hover:underline">
+                  יומן הפעולות
+                </Link>{' '}
+                עם ההודעה המדויקת, גם אם תסגור/י את המסך הזה.
+              </p>
+              <button
+                type="button"
+                onClick={handleRetryFailed}
+                className="mt-2 rounded-full border border-danger px-4 py-2 text-sm font-bold text-danger"
+              >
+                נסה שוב את הימים שנכשלו ({failedCount})
+              </button>
+            </div>
+          )}
+
           <p className="mt-4 text-sm text-ink-700">
             כל הלימודים שנוצרו הם <strong>טיוטה</strong> — יש לעבור עליהם בעמוד הלימודים ולפרסם כל אחד בנפרד.
           </p>

@@ -1,6 +1,9 @@
 import type { GenderTrack, Language, Lesson, LessonImage, LessonStatus } from '@daily-learning/shared';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { logActivity } from './activityLog';
+import { retryAsync } from './retry';
+
 export const LESSONS_PAGE_SIZE = 20;
 
 export interface LessonFilters {
@@ -69,22 +72,73 @@ export async function fetchLessonById(supabase: SupabaseClient, id: string): Pro
   return { data: data as Lesson, error: null };
 }
 
-export async function createLesson(supabase: SupabaseClient, input: LessonInput): Promise<Result<Lesson>> {
+/**
+ * Looks up the lesson for a given (date, track, language) if one already
+ * exists — used by the batch importer to detect "retrying a day that
+ * partially succeeded last time" (the lesson row was created, but the
+ * image loop failed partway through) so a retry resumes uploading the
+ * missing pages onto the SAME lesson instead of calling createLesson
+ * again and hitting the unique-date conflict.
+ */
+export async function fetchLessonByDate(
+  supabase: SupabaseClient,
+  lessonDate: string,
+  genderTrack: GenderTrack,
+  language: Language
+): Promise<Result<Lesson>> {
   const { data, error } = await supabase
     .from('lessons')
-    .insert({
-      lesson_date: input.lessonDate,
-      hebrew_date: input.hebrewDate || null,
-      title: input.title,
-      gender_track: input.genderTrack,
-      language: input.language,
-      status: input.status,
-    })
     .select(LESSON_COLUMNS)
-    .single();
-
+    .eq('lesson_date', lessonDate)
+    .eq('gender_track', genderTrack)
+    .eq('language', language)
+    .maybeSingle();
   if (error) return { data: null, error: friendlyError(error) };
-  return { data: data as Lesson, error: null };
+  return { data: (data as Lesson) ?? null, error: null };
+}
+
+export async function createLesson(supabase: SupabaseClient, input: LessonInput): Promise<Result<Lesson>> {
+  // A duplicate-date conflict (code 23505) is a real, deterministic
+  // rejection — retrying it just fails again three times for nothing. A
+  // transient network blip on the other hand has no error code at all
+  // (or an unrelated one), so it's the one worth a couple of retries.
+  const result = await retryAsync(
+    () =>
+      supabase
+        .from('lessons')
+        .insert({
+          lesson_date: input.lessonDate,
+          hebrew_date: input.hebrewDate || null,
+          title: input.title,
+          gender_track: input.genderTrack,
+          language: input.language,
+          status: input.status,
+        })
+        .select(LESSON_COLUMNS)
+        .single(),
+    (r) => !!r.error && r.error.code !== '23505'
+  );
+
+  if (result.error) {
+    const message = friendlyError(result.error);
+    await logActivity(supabase, {
+      action: 'lesson.create',
+      entityType: 'lesson',
+      status: 'error',
+      message,
+      metadata: { lessonDate: input.lessonDate, genderTrack: input.genderTrack, language: input.language },
+    });
+    return { data: null, error: message };
+  }
+
+  await logActivity(supabase, {
+    action: 'lesson.create',
+    entityType: 'lesson',
+    entityId: result.data.id,
+    status: 'success',
+    metadata: { lessonDate: input.lessonDate, genderTrack: input.genderTrack, language: input.language },
+  });
+  return { data: result.data as Lesson, error: null };
 }
 
 export async function updateLesson(
@@ -106,7 +160,17 @@ export async function updateLesson(
     .select(LESSON_COLUMNS)
     .single();
 
-  if (error) return { data: null, error: friendlyError(error) };
+  const message = error ? friendlyError(error) : null;
+  await logActivity(supabase, {
+    action: 'lesson.update',
+    entityType: 'lesson',
+    entityId: id,
+    status: error ? 'error' : 'success',
+    message,
+    metadata: { status: input.status },
+  });
+
+  if (error) return { data: null, error: message };
   return { data: data as Lesson, error: null };
 }
 
@@ -120,7 +184,17 @@ export async function deleteLesson(supabase: SupabaseClient, id: string): Promis
   }
 
   const { error } = await supabase.from('lessons').delete().eq('id', id);
-  if (error) return { error: friendlyError(error) };
+  const message = error ? friendlyError(error) : null;
+  await logActivity(supabase, {
+    action: 'lesson.delete',
+    entityType: 'lesson',
+    entityId: id,
+    status: error ? 'error' : 'success',
+    message,
+    metadata: { imagesRemoved: paths.length },
+  });
+
+  if (error) return { error: message };
   return { error: null };
 }
 
@@ -132,6 +206,7 @@ export async function duplicateLesson(
   const { data: source, error: sourceError } = await fetchLessonById(supabase, sourceId);
   if (sourceError || !source) return { data: null, error: sourceError ?? 'Lesson not found.' };
 
+  // createLesson already logs its own create — no need to double-log here.
   const { data: newLesson, error: createError } = await createLesson(supabase, {
     lessonDate: newDate,
     hebrewDate: source.hebrew_date ?? '',
@@ -143,7 +218,17 @@ export async function duplicateLesson(
   if (createError || !newLesson) return { data: null, error: createError };
 
   const { images, error: imagesError } = await fetchLessonImages(supabase, sourceId);
-  if (imagesError) return { data: newLesson, error: imagesError };
+  if (imagesError) {
+    await logActivity(supabase, {
+      action: 'lesson.duplicate',
+      entityType: 'lesson',
+      entityId: newLesson.id,
+      status: 'error',
+      message: imagesError,
+      metadata: { sourceId, newDate },
+    });
+    return { data: newLesson, error: imagesError };
+  }
 
   if (images.length > 0) {
     const { error: insertImagesError } = await supabase.from('lesson_images').insert(
@@ -153,9 +238,26 @@ export async function duplicateLesson(
         sort_order: image.sort_order,
       }))
     );
-    if (insertImagesError) return { data: newLesson, error: insertImagesError.message };
+    if (insertImagesError) {
+      await logActivity(supabase, {
+        action: 'lesson.duplicate',
+        entityType: 'lesson',
+        entityId: newLesson.id,
+        status: 'error',
+        message: insertImagesError.message,
+        metadata: { sourceId, newDate, imageCount: images.length },
+      });
+      return { data: newLesson, error: insertImagesError.message };
+    }
   }
 
+  await logActivity(supabase, {
+    action: 'lesson.duplicate',
+    entityType: 'lesson',
+    entityId: newLesson.id,
+    status: 'success',
+    metadata: { sourceId, newDate, imageCount: images.length },
+  });
   return { data: newLesson, error: null };
 }
 
@@ -180,22 +282,77 @@ export async function uploadLessonImage(
 ): Promise<{ error: string | null }> {
   const extension = file.name.includes('.') ? file.name.split('.').pop() : 'jpg';
   const path = `${lessonId}/${crypto.randomUUID()}.${extension}`;
+  const logMeta = { fileName: file.name, size: file.size };
 
-  const { error: uploadError } = await supabase.storage.from('lesson-images').upload(path, file);
-  if (uploadError) return { error: uploadError.message };
+  // Both network calls below are the exact two steps traced back to a
+  // real incident: a batch import's storage upload succeeded but the
+  // follow-up database insert silently failed (leaving an orphaned file
+  // with no lesson_images row), and separately, a storage upload itself
+  // failed outright — both looked like one-off network blips, not a
+  // structural bug, since everything immediately around them succeeded.
+  const uploadResult = await retryAsync(
+    () => supabase.storage.from('lesson-images').upload(path, file),
+    (r) => !!r.error
+  );
+  if (uploadResult.error) {
+    await logActivity(supabase, {
+      action: 'lesson_image.upload',
+      entityType: 'lesson',
+      entityId: lessonId,
+      status: 'error',
+      message: uploadResult.error.message,
+      metadata: { ...logMeta, step: 'storage_upload' },
+    });
+    return { error: uploadResult.error.message };
+  }
 
   const { data: urlData } = supabase.storage.from('lesson-images').getPublicUrl(path);
 
   const { images: existing, error: existingError } = await fetchLessonImages(supabase, lessonId);
-  if (existingError) return { error: existingError };
+  if (existingError) {
+    await logActivity(supabase, {
+      action: 'lesson_image.upload',
+      entityType: 'lesson',
+      entityId: lessonId,
+      status: 'error',
+      message: existingError,
+      metadata: { ...logMeta, step: 'fetch_existing', storagePath: path },
+    });
+    return { error: existingError };
+  }
 
   const nextSortOrder = existing.length > 0 ? Math.max(...existing.map((i) => i.sort_order)) + 1 : 0;
 
-  const { error: insertError } = await supabase
-    .from('lesson_images')
-    .insert({ lesson_id: lessonId, image_url: urlData.publicUrl, sort_order: nextSortOrder });
+  const insertResult = await retryAsync(
+    () =>
+      supabase
+        .from('lesson_images')
+        .insert({ lesson_id: lessonId, image_url: urlData.publicUrl, sort_order: nextSortOrder }),
+    (r) => !!r.error
+  );
 
-  if (insertError) return { error: insertError.message };
+  if (insertResult.error) {
+    await logActivity(supabase, {
+      action: 'lesson_image.upload',
+      entityType: 'lesson',
+      entityId: lessonId,
+      status: 'error',
+      message: insertResult.error.message,
+      // The file itself is already sitting in storage at this path even
+      // though the row failed — recorded here so an orphaned file like
+      // this is actually findable later instead of just invisible.
+      metadata: { ...logMeta, step: 'db_insert', orphanedStoragePath: path },
+    });
+    return { error: insertResult.error.message };
+  }
+
+  await logActivity(supabase, {
+    action: 'lesson_image.upload',
+    entityType: 'lesson',
+    entityId: lessonId,
+    status: 'success',
+    metadata: logMeta,
+  });
   return { error: null };
 }
 
@@ -227,6 +384,15 @@ export async function deleteLessonImage(
   }
 
   const { error } = await supabase.from('lesson_images').delete().eq('id', image.id);
+  await logActivity(supabase, {
+    action: 'lesson_image.delete',
+    entityType: 'lesson_image',
+    entityId: image.id,
+    status: error ? 'error' : 'success',
+    message: error?.message ?? null,
+    metadata: { lessonId: image.lesson_id },
+  });
+
   if (error) return { error: error.message };
   return { error: null };
 }

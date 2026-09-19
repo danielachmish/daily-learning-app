@@ -37,6 +37,10 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: 'לא מחובר/ת.' }, { status: 401 });
   }
+  // Captured into plain consts so the logUserCreate closure below doesn't
+  // rely on TS narrowing `user` across a function boundary (it doesn't).
+  const actorId = user.id;
+  const actorEmail = user.email ?? null;
 
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
   if (profile?.role !== 'admin') {
@@ -56,6 +60,28 @@ export async function POST(request: Request) {
   const serviceRoleKey = requireEnvVar('SUPABASE_SERVICE_ROLE_KEY', process.env.SUPABASE_SERVICE_ROLE_KEY);
   const serviceClient = createServiceRoleClient(supabaseUrl, serviceRoleKey);
 
+  // This route runs with the service-role client (needed for
+  // auth.admin.createUser), which bypasses RLS entirely and has no signed-
+  // in session of its own — so the admin_activity_log write below passes
+  // the caller's identity explicitly instead of the usual getSession()
+  // lookup the browser-side logActivity() helper uses.
+  async function logUserCreate(status: 'success' | 'error', message?: string, entityId?: string) {
+    try {
+      await serviceClient.from('admin_activity_log').insert({
+        actor_id: actorId,
+        actor_email: actorEmail,
+        action: 'user.create',
+        entity_type: 'user',
+        entity_id: entityId ?? null,
+        status,
+        message: message ?? null,
+        metadata: { email: body.email, genderTrack: body.genderTrack, language: body.language },
+      });
+    } catch {
+      // Never let a logging problem fail the actual user-creation response.
+    }
+  }
+
   const { data: created, error: createError } = await serviceClient.auth.admin.createUser({
     email: body.email,
     password: body.password,
@@ -63,7 +89,9 @@ export async function POST(request: Request) {
   });
 
   if (createError || !created.user) {
-    return NextResponse.json({ error: createError?.message ?? 'יצירת המשתמש נכשלה.' }, { status: 400 });
+    const message = createError?.message ?? 'יצירת המשתמש נכשלה.';
+    await logUserCreate('error', message);
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 
   const { error: profileError } = await serviceClient.from('profiles').insert({
@@ -79,8 +107,10 @@ export async function POST(request: Request) {
   if (profileError) {
     // Roll back the auth user so we don't leave an orphaned account with no profile.
     await serviceClient.auth.admin.deleteUser(created.user.id);
+    await logUserCreate('error', profileError.message, created.user.id);
     return NextResponse.json({ error: profileError.message }, { status: 400 });
   }
 
+  await logUserCreate('success', undefined, created.user.id);
   return NextResponse.json({ id: created.user.id });
 }

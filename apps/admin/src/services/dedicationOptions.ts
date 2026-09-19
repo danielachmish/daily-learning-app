@@ -1,6 +1,8 @@
 import type { DedicationDurationOption } from '@daily-learning/shared';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { logActivity } from './activityLog';
+
 interface Result<T> {
   data: T | null;
   error: string | null;
@@ -34,6 +36,13 @@ export async function createDurationOption(
   input: DurationOptionInput
 ): Promise<{ error: string | null }> {
   const { error } = await supabase.from('dedication_duration_options').insert(input);
+  await logActivity(supabase, {
+    action: 'dedication_option.create',
+    entityType: 'dedication_duration_option',
+    status: error ? 'error' : 'success',
+    message: error?.message ?? null,
+    metadata: { label: input.label, price: input.price, durationDays: input.duration_days },
+  });
   return { error: error?.message ?? null };
 }
 
@@ -46,10 +55,25 @@ export async function updateDurationOption(
     .from('dedication_duration_options')
     .update({ ...input, updated_at: new Date().toISOString() })
     .eq('id', id);
+  await logActivity(supabase, {
+    action: 'dedication_option.update',
+    entityType: 'dedication_duration_option',
+    entityId: id,
+    status: error ? 'error' : 'success',
+    message: error?.message ?? null,
+    metadata: { label: input.label, price: input.price, durationDays: input.duration_days },
+  });
   return { error: error?.message ?? null };
 }
 
 export async function deleteDurationOption(supabase: SupabaseClient, id: string): Promise<{ error: string | null }> {
   const { error } = await supabase.from('dedication_duration_options').delete().eq('id', id);
+  await logActivity(supabase, {
+    action: 'dedication_option.delete',
+    entityType: 'dedication_duration_option',
+    entityId: id,
+    status: error ? 'error' : 'success',
+    message: error?.message ?? null,
+  });
   return { error: error?.message ?? null };
 }

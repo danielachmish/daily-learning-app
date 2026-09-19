@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { logActivity } from './activityLog';
+
 export interface Prices {
   monthlyPrice: string;
   yearlyPrice: string;
@@ -39,6 +41,14 @@ export async function savePrices(supabase: SupabaseClient, prices: Prices): Prom
     { key: MONTHLY_KEY, value: prices.monthlyPrice, updated_at: new Date().toISOString() },
     { key: YEARLY_KEY, value: prices.yearlyPrice, updated_at: new Date().toISOString() },
   ]);
+
+  await logActivity(supabase, {
+    action: 'settings.save_prices',
+    entityType: 'settings',
+    status: error ? 'error' : 'success',
+    message: error?.message ?? null,
+    metadata: prices as unknown as Record<string, unknown>,
+  });
 
   if (error) return { error: error.message };
   return { error: null };

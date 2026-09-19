@@ -1,6 +1,8 @@
 import type { ApprovalStatus, Dedication, DedicationType, PaymentStatus } from '@daily-learning/shared';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { logActivity } from './activityLog';
+
 export const DEDICATIONS_PAGE_SIZE = 20;
 
 export interface DedicationFilters {
@@ -68,6 +70,14 @@ async function setApprovalStatus(
     .select(DEDICATION_COLUMNS)
     .single();
 
+  await logActivity(supabase, {
+    action: `dedication.${status}`,
+    entityType: 'dedication',
+    entityId: id,
+    status: error ? 'error' : 'success',
+    message: error?.message ?? null,
+  });
+
   if (error) return { data: null, error: error.message };
   return { data: data as Dedication, error: null };
 }
@@ -95,6 +105,14 @@ export async function updateDedicationText(
     .eq('id', id)
     .select(DEDICATION_COLUMNS)
     .single();
+
+  await logActivity(supabase, {
+    action: 'dedication.update_text',
+    entityType: 'dedication',
+    entityId: id,
+    status: error ? 'error' : 'success',
+    message: error?.message ?? null,
+  });
 
   if (error) return { data: null, error: error.message };
   return { data: data as Dedication, error: null };
