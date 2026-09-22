@@ -26,6 +26,19 @@ export interface AppStrings {
     submit: string;
     noAccount: string;
   };
+  acceptInvite: {
+    verifying: string;
+    title: string;
+    subtitle: string;
+    passwordPlaceholder: string;
+    confirmPasswordPlaceholder: string;
+    tooShort: string;
+    mismatch: string;
+    submit: string;
+    invalidTitle: string;
+    invalidMessage: string;
+    successMessage: string;
+  };
   register: {
     title: string;
     fullNamePlaceholder: string;
@@ -200,6 +213,19 @@ const he: AppStrings = {
     missingFields: 'נא למלא אימייל וסיסמה.',
     submit: 'התחבר/י',
     noAccount: 'אין לך חשבון? הרשמ/י כאן',
+  },
+  acceptInvite: {
+    verifying: 'מאמת את הקישור…',
+    title: 'ברוכ/ה הבא/ה! נותר רק לקבוע סיסמה',
+    subtitle: 'החשבון שלך כבר קיים ומחובר למנוי — רק צריך לבחור סיסמה כדי להיכנס.',
+    passwordPlaceholder: 'סיסמה חדשה',
+    confirmPasswordPlaceholder: 'אימות סיסמה',
+    tooShort: 'הסיסמה חייבת להכיל לפחות 6 תווים.',
+    mismatch: 'הסיסמאות אינן תואמות.',
+    submit: 'קביעת סיסמה וכניסה',
+    invalidTitle: 'הקישור אינו תקין',
+    invalidMessage: 'הקישור פג תוקף או שכבר נעשה בו שימוש. יש לפנות לתמיכה כדי לקבל קישור חדש.',
+    successMessage: 'הסיסמה נקבעה! מעביר/ה אותך לאפליקציה…',
   },
   register: {
     title: 'הרשמה',
@@ -378,6 +404,19 @@ const en: AppStrings = {
     missingFields: 'Please enter an email and password.',
     submit: 'Log in',
     noAccount: "Don't have an account? Sign up",
+  },
+  acceptInvite: {
+    verifying: 'Verifying the link…',
+    title: 'Welcome! Just set a password',
+    subtitle: 'Your account already exists and is linked to a subscription — just choose a password to log in.',
+    passwordPlaceholder: 'New password',
+    confirmPasswordPlaceholder: 'Confirm password',
+    tooShort: 'Password must be at least 6 characters.',
+    mismatch: "Passwords don't match.",
+    submit: 'Set password and log in',
+    invalidTitle: 'This link is invalid',
+    invalidMessage: 'The link expired or was already used. Please contact support for a new one.',
+    successMessage: 'Password set! Taking you to the app…',
   },
   register: {
     title: 'Sign up',

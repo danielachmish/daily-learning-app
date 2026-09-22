@@ -31,6 +31,7 @@ const ACTION_LABELS: Record<string, string> = {
   'subscription.nedarim_reactivate': 'הפעלת הוראת קבע מחדש',
   'subscription.nedarim_cancel': 'ביטול הוראת קבע',
   'user.create': 'יצירת משתמש',
+  'user.bulk_invite': 'הזמנת מנוי מקובץ',
   'user.update_track_language': 'עדכון מסלול/שפה',
   'user.set_free_access': 'שינוי גישה חינמית',
   'user.set_account_status': 'שינוי סטטוס חשבון',

@@ -1,6 +1,7 @@
 'use client';
 
 import type { PlanType, SubscriptionStatus } from '@daily-learning/shared';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import {
@@ -112,7 +113,15 @@ export default function SubscriptionsListPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-extrabold text-ink-900">מנויים</h1>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-extrabold text-ink-900">מנויים</h1>
+        <Link
+          href="/subscriptions/import"
+          className="rounded-full border border-teal-400 px-4 py-2 text-sm font-bold text-teal-600"
+        >
+          ייבוא מנויים מקובץ
+        </Link>
+      </div>
 
       <div className="mb-4 flex flex-wrap gap-3">
         <select
