@@ -1,0 +1,206 @@
+/* Palette matched to apps/mobile/src/theme/colors.ts, so this page reads
+   as a continuation of the app rather than a separate product. */
+:root {
+  --ink-900: #122048;
+  --ink-700: #3b4864;
+  --slate-500: #59697c;
+  --red-600: #bb2f2f;
+  --red-400: #de3535;
+  --gold: #8f7400;
+  --lavender-100: #dae1f5;
+  --paper-0: #f7fcfd;
+  --paper-50: #ffffff;
+  --line: rgba(38, 50, 74, 0.1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: var(--paper-0);
+  color: var(--ink-900);
+  line-height: 1.6;
+}
+
+.container {
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Topbar */
+.topbar {
+  background: var(--paper-50);
+  border-bottom: 1px solid var(--line);
+}
+
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+}
+
+.topbar-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.topbar-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* Hero */
+.hero {
+  padding: 56px 0 40px;
+  text-align: center;
+}
+
+.hero-logo {
+  max-width: 260px;
+  width: 60%;
+  height: auto;
+  margin-bottom: 24px;
+}
+
+.hero h1 {
+  font-size: 34px;
+  margin: 0 0 16px;
+  color: var(--ink-900);
+}
+
+.hero-sub {
+  max-width: 560px;
+  margin: 0 auto 32px;
+  color: var(--slate-500);
+  font-size: 17px;
+}
+
+/* Store buttons */
+.store-buttons {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.store-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 170px;
+  padding: 10px 24px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: #fff;
+  background: linear-gradient(90deg, var(--red-400), var(--gold));
+  box-shadow: 0 4px 14px rgba(222, 53, 53, 0.25);
+}
+
+.store-btn-sub {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.store-btn-main {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* Features */
+.features {
+  padding: 48px 0;
+}
+
+.section-title {
+  text-align: center;
+  font-size: 26px;
+  margin-bottom: 32px;
+  color: var(--ink-900);
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 20px;
+}
+
+.feature-card {
+  background: var(--paper-50);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 22px;
+}
+
+.feature-card h3 {
+  margin: 0 0 10px;
+  color: var(--ink-900);
+  font-size: 18px;
+}
+
+.feature-card p {
+  margin: 0;
+  color: var(--slate-500);
+  font-size: 15px;
+}
+
+/* CTA */
+.cta {
+  background: var(--lavender-100);
+  padding: 48px 0;
+  text-align: center;
+}
+
+.cta h2 {
+  margin: 0 0 10px;
+  font-size: 26px;
+  color: var(--ink-900);
+}
+
+.cta p {
+  margin: 0 0 24px;
+  color: var(--ink-700);
+}
+
+/* Footer */
+.footer {
+  padding: 24px 0;
+  border-top: 1px solid var(--line);
+}
+
+.footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  color: var(--slate-500);
+}
+
+.footer-links a {
+  color: var(--slate-500);
+  text-decoration: none;
+  margin-inline-start: 16px;
+}
+
+.footer-links a:hover {
+  color: var(--ink-900);
+}
+
+@media (max-width: 480px) {
+  .hero h1 {
+    font-size: 26px;
+  }
+}

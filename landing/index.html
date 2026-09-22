@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>לימוד יומי — לימוד יומי לנייד</title>
+<meta name="description" content="לימוד יומי בתמונות, כל יום מחדש. עקבו אחרי הרצף שלכם, חזרו ללימודים קודמים בלוח השנה, והקדישו לימוד לעילוי נשמה, לרפואה או להצלחה." />
+<link rel="icon" href="assets/favicon.png" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!--
+  TODO לפני העלאה לאוויר:
+  - לאשר את שם המותג/דומיין הסופי (הצבעים כאן כבר תואמים לאתר הארגון limudyomi.co.il,
+    ראו apps/mobile/src/theme/colors.ts).
+  - להחליף את קישורי App Store / Google Play למטה בקישורים האמיתיים ברגע שהאפליקציה מפורסמת.
+  - להוסיף מספר צילומי מסך אמיתיים מהאפליקציה בתיקיית assets/screenshots.
+  - לוודא שמדיניות הפרטיות ותנאי השימוש (docs/06_Privacy_Policy.md, docs/07_Terms_of_Service.md)
+    מפורסמים כעמודי HTML ציבוריים, ולעדכן את הקישורים בפוטר בהתאם.
+-->
+
+<header class="topbar">
+  <div class="container topbar-inner">
+    <img class="topbar-logo" src="assets/icon.png" alt="לוגו לימוד יומי" />
+    <span class="topbar-title">לימוד יומי</span>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="container hero-inner">
+      <img class="hero-logo" src="assets/logo-full.png" alt="לימוד יומי" />
+      <h1>לימוד יומי, כל יום מחדש</h1>
+      <p class="hero-sub">
+        לימוד יומי קצר בתמונות, ישירות מהטלפון. סמנו "סיימתי", שמרו על רצף לימוד,
+        וחזרו לכל לימוד קודם דרך לוח השנה — בעברית ובאנגלית, לגברים ולנשים.
+      </p>
+      <div class="store-buttons">
+        <!-- TODO: להחליף בקישור האמיתי מה-App Store -->
+        <a class="store-btn" href="#" aria-label="הורדה מה-App Store">
+          <span class="store-btn-sub">הורידו מ־</span>
+          <span class="store-btn-main">App Store</span>
+        </a>
+        <!-- TODO: להחליף בקישור האמיתי מ-Google Play -->
+        <a class="store-btn" href="#" aria-label="הורדה מ-Google Play">
+          <span class="store-btn-sub">הורידו מ־</span>
+          <span class="store-btn-main">Google Play</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="container">
+      <h2 class="section-title">מה יש באפליקציה</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <h3>לימוד יומי בתמונות</h3>
+          <p>כל יום לימוד חדש, מוצג בתמונות ברורות שקל לעקוב אחריהן.</p>
+        </div>
+        <div class="feature-card">
+          <h3>רצף לימוד</h3>
+          <p>עקבו אחרי הרצף הנוכחי שלכם ואחרי השיא האישי, ותשמרו על התמדה.</p>
+        </div>
+        <div class="feature-card">
+          <h3>לוח שנה אישי</h3>
+          <p>חזרו בקלות לכל לימוד מיום קודם, וראו אילו ימים כבר השלמתם.</p>
+        </div>
+        <div class="feature-card">
+          <h3>הקדשות יומיות</h3>
+          <p>הקדישו את הלימוד היומי לעילוי נשמה, לרפואה, להצלחה, לזיווג או להודיה.</p>
+        </div>
+        <div class="feature-card">
+          <h3>תזכורת יומית</h3>
+          <p>הפעילו תזכורת בשעה שנוחה לכם, כדי לא לפספס אף יום.</p>
+        </div>
+        <div class="feature-card">
+          <h3>עברית ואנגלית</h3>
+          <p>האפליקציה זמינה בעברית ובאנגלית, למסלול גברים ולמסלול נשים.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta">
+    <div class="container cta-inner">
+      <h2>מתחילים היום</h2>
+      <p>הצטרפו ללימוד היומי, ישירות מהטלפון.</p>
+      <div class="store-buttons">
+        <a class="store-btn" href="#" aria-label="הורדה מה-App Store">
+          <span class="store-btn-sub">הורידו מ־</span>
+          <span class="store-btn-main">App Store</span>
+        </a>
+        <a class="store-btn" href="#" aria-label="הורדה מ-Google Play">
+          <span class="store-btn-sub">הורידו מ־</span>
+          <span class="store-btn-main">Google Play</span>
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <span>&copy; <span id="year"></span> לימוד יומי. כל הזכויות שמורות.</span>
+    <nav class="footer-links">
+      <!-- TODO: לקשר לעמודי HTML ציבוריים אמיתיים של המדיניות/התנאים -->
+      <a href="#">מדיניות פרטיות</a>
+      <a href="#">תנאי שימוש</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+
+</body>
+</html>
