@@ -31,6 +31,24 @@ function normalizeHeader(value: unknown): string {
   return String(value ?? '').trim().toLowerCase();
 }
 
+/**
+ * Every Israeli phone number is 10 digits starting with 0. Excel silently
+ * drops that leading zero whenever the phone column is formatted as a
+ * Number instead of Text (0539228031 and 539228031 are the same number
+ * arithmetically) — confirmed directly against a real uploaded file where
+ * every number came through one digit short. Restoring it here matters
+ * a lot: the phone becomes the account's password, so a password missing
+ * its leading zero would never match what the person actually types.
+ */
+function normalizePhone(raw: unknown): string {
+  const digits = String(raw ?? '').replace(/\D/g, '');
+  if (digits.length === 9) return `0${digits}`;
+  // Some sources store the country code instead of the leading 0
+  // (e.g. "972539228031") — normalize that to the same local form.
+  if (digits.length === 12 && digits.startsWith('972')) return `0${digits.slice(3)}`;
+  return digits;
+}
+
 function findColumn(headerRow: unknown[], candidates: string[]): number {
   const normalized = headerRow.map(normalizeHeader);
   for (const candidate of candidates) {
@@ -84,7 +102,7 @@ export async function parseSubscriberFile(file: File): Promise<ParseResult> {
   for (const row of dataRows) {
     const fullName = String(row[nameIdx] ?? '').trim();
     const email = String(row[emailIdx] ?? '').trim().toLowerCase();
-    const phone = String(row[phoneIdx] ?? '').replace(/\D/g, '');
+    const phone = normalizePhone(row[phoneIdx]);
 
     if (!fullName || !email) {
       skippedRows += 1;
