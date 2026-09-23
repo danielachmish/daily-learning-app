@@ -143,8 +143,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 12,
   },
-  // Same idea as login/accept-invite: text meant to stay centered in both
-  // languages only needs RTL character shaping, not right alignment.
+  // Same idea as login: text meant to stay centered in both languages
+  // only needs RTL character shaping, not right alignment.
   centerTextRTL: {
     writingDirection: 'rtl',
   },

@@ -1,6 +1,5 @@
 'use client';
 
-import type { GenderTrack, Language } from '@daily-learning/shared';
 import Link from 'next/link';
 import { useRef, useState } from 'react';
 
@@ -11,18 +10,18 @@ type Phase = 'select' | 'parsing' | 'preview' | 'importing' | 'done';
 
 interface RowResult {
   subscriber: ParsedSubscriber;
-  outcome: 'invited' | 'skipped' | 'error';
+  outcome: 'created' | 'skipped' | 'error';
   message?: string;
 }
 
-interface InviteResponse {
+interface CreateResponse {
   id?: string;
   skipped?: boolean;
   error?: string;
 }
 
-async function inviteOne(subscriber: ParsedSubscriber, track: GenderTrack, language: Language): Promise<RowResult> {
-  const attempt = await retryAsync<{ ok: boolean; data: InviteResponse }>(
+async function createOne(subscriber: ParsedSubscriber): Promise<RowResult> {
+  const attempt = await retryAsync<{ ok: boolean; data: CreateResponse }>(
     async () => {
       try {
         const resp = await fetch('/api/users/bulk-invite', {
@@ -32,11 +31,9 @@ async function inviteOne(subscriber: ParsedSubscriber, track: GenderTrack, langu
             fullName: subscriber.fullName,
             email: subscriber.email,
             phone: subscriber.phone,
-            genderTrack: track,
-            language,
           }),
         });
-        const data = (await resp.json()) as InviteResponse;
+        const data = (await resp.json()) as CreateResponse;
         return { ok: resp.ok, data };
       } catch {
         return { ok: false, data: { error: 'שגיאת תקשורת.' } };
@@ -49,21 +46,20 @@ async function inviteOne(subscriber: ParsedSubscriber, track: GenderTrack, langu
   );
 
   if (!attempt.ok) {
-    return { subscriber, outcome: 'error', message: attempt.data.error ?? 'ההזמנה נכשלה.' };
+    return { subscriber, outcome: 'error', message: attempt.data.error ?? 'היצירה נכשלה.' };
   }
   if (attempt.data.skipped) {
     return { subscriber, outcome: 'skipped', message: 'כבר קיים חשבון עם המייל הזה.' };
   }
-  return { subscriber, outcome: 'invited' };
+  return { subscriber, outcome: 'created' };
 }
 
 export default function ImportSubscribersPage() {
   const [phase, setPhase] = useState<Phase>('select');
-  const [track, setTrack] = useState<GenderTrack>('women');
-  const [language, setLanguage] = useState<Language>('he');
   const [file, setFile] = useState<File | null>(null);
   const [subscribers, setSubscribers] = useState<ParsedSubscriber[]>([]);
   const [skippedRows, setSkippedRows] = useState(0);
+  const [invalidPhoneRows, setInvalidPhoneRows] = useState(0);
   const [duplicateEmails, setDuplicateEmails] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<RowResult[]>([]);
@@ -78,12 +74,13 @@ export default function ImportSubscribersPage() {
     try {
       const result = await parseSubscriberFile(file);
       if (result.subscribers.length === 0) {
-        setError('לא נמצאו שורות תקינות בקובץ (עם שם מלא ומייל).');
+        setError('לא נמצאו שורות תקינות בקובץ (עם שם מלא, מייל וטלפון תקין).');
         setPhase('select');
         return;
       }
       setSubscribers(result.subscribers);
       setSkippedRows(result.skippedRows);
+      setInvalidPhoneRows(result.invalidPhoneRows);
       setDuplicateEmails(result.duplicateEmails);
       setPhase('preview');
     } catch (err) {
@@ -96,7 +93,7 @@ export default function ImportSubscribersPage() {
     setBatchTotal(toProcess.length);
     setBatchDone(0);
     for (const subscriber of toProcess) {
-      const result = await inviteOne(subscriber, track, language);
+      const result = await createOne(subscriber);
       setResults((prev) => [...prev.filter((r) => r.subscriber.email !== subscriber.email), result]);
       setBatchDone((n) => n + 1);
     }
@@ -117,7 +114,7 @@ export default function ImportSubscribersPage() {
     setPhase('done');
   }
 
-  const invitedCount = results.filter((r) => r.outcome === 'invited').length;
+  const createdCount = results.filter((r) => r.outcome === 'created').length;
   const skippedCount = results.filter((r) => r.outcome === 'skipped').length;
   const failedCount = results.filter((r) => r.outcome === 'error').length;
 
@@ -132,41 +129,15 @@ export default function ImportSubscribersPage() {
       </div>
       <p className="mb-6 text-sm text-slate-500">
         מעלים קובץ XLSX עם עמודות <strong>שם מלא</strong>, <strong>מייל</strong> ו<strong>טלפון</strong> (בכל
-        סדר, השורה הראשונה חייבת להיות כותרות) — לכל שורה נוצר חשבון עם{' '}
-        <strong>גישה חינמית קבועה</strong>, ונשלחת אליו הזמנה במייל לקביעת סיסמה. חשוב: שליחת מייל בכמות
-        גדולה דורשת שרת דוא&quot;ל (SMTP) מוגדר בפרויקט ה-Supabase — אחרת ההזמנות עלולות להיתקע אחרי כמה
-        עשרות בודדות.
+        סדר, השורה הראשונה חייבת להיות כותרות) — לכל שורה נוצר חשבון עם <strong>גישה חינמית קבועה</strong>,
+        שם המשתמש הוא <strong>המייל</strong> והסיסמה היא <strong>מספר הטלפון</strong> (ספרות בלבד, בלי
+        מקפים/רווחים). לא נשלח שום מייל — מספיק להודיע לכולם פעם אחת: &quot;נכנסים עם המייל שנרשמתם
+        והסיסמה היא מספר הטלפון שלכם&quot;. את המסלול (גברים/נשים) והשפה כל אחד/ת בוחר/ת בעצמו/ה
+        בכניסה הראשונה לאפליקציה.
       </p>
 
       {phase === 'select' && (
         <div className="flex flex-col gap-4">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-500">מסלול זמני</label>
-            <select
-              value={track}
-              onChange={(e) => setTrack(e.target.value as GenderTrack)}
-              className="w-full max-w-xs rounded-lg border border-line bg-paper-50 px-3 py-2 text-sm text-ink-900"
-            >
-              <option value="women">נשים</option>
-              <option value="men">גברים</option>
-            </select>
-            <p className="mt-1 text-xs text-slate-500">
-              הקובץ לא אומר מי גבר ומי אישה, ולכן כל מנוי מיובא יתבקש לבחור את המסלול שלו בעצמו בכניסה
-              הראשונה לאפליקציה. המסלול כאן הוא רק ערך זמני עד שהמנוי בוחר.
-            </p>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-500">שפה</label>
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value as Language)}
-              className="w-full max-w-xs rounded-lg border border-line bg-paper-50 px-3 py-2 text-sm text-ink-900"
-            >
-              <option value="he">עברית</option>
-              <option value="en">English</option>
-            </select>
-          </div>
-
           <input
             ref={fileInputRef}
             type="file"
@@ -200,14 +171,18 @@ export default function ImportSubscribersPage() {
       {phase === 'preview' && (
         <div>
           <p className="mb-3 text-sm text-ink-700">
-            נמצאו <strong>{subscribers.length}</strong> מנויים תקינים (מסלול זמני:{' '}
-            {track === 'women' ? 'נשים' : 'גברים'}, עד שכל מנוי יבחר בעצמו; שפה:{' '}
-            {language === 'he' ? 'עברית' : 'English'})
+            נמצאו <strong>{subscribers.length}</strong> מנויים תקינים.
           </p>
 
           {skippedRows > 0 && (
             <p className="mb-2 text-sm text-slate-500">
               {skippedRows} שורות דולגו (חסר שם מלא או מייל).
+            </p>
+          )}
+          {invalidPhoneRows > 0 && (
+            <p className="mb-2 text-sm text-amber-500">
+              {invalidPhoneRows} שורות דולגו — מספר הטלפון חסר או קצר מדי לשמש כסיסמה (פחות מ-6
+              ספרות).
             </p>
           )}
           {duplicateEmails.length > 0 && (
@@ -222,8 +197,8 @@ export default function ImportSubscribersPage() {
               <thead>
                 <tr className="border-b border-line text-start text-slate-500">
                   <th className="py-2 pe-4 text-start font-medium">שם מלא</th>
-                  <th className="py-2 pe-4 text-start font-medium">מייל</th>
-                  <th className="py-2 pe-4 text-start font-medium">טלפון</th>
+                  <th className="py-2 pe-4 text-start font-medium">מייל (שם משתמש)</th>
+                  <th className="py-2 pe-4 text-start font-medium">טלפון (סיסמה)</th>
                 </tr>
               </thead>
               <tbody>
@@ -231,7 +206,7 @@ export default function ImportSubscribersPage() {
                   <tr key={s.email} className="border-b border-line">
                     <td className="py-1.5 pe-4">{s.fullName}</td>
                     <td className="py-1.5 pe-4">{s.email}</td>
-                    <td className="py-1.5 pe-4">{s.phone || '—'}</td>
+                    <td className="py-1.5 pe-4">{s.phone}</td>
                   </tr>
                 ))}
               </tbody>
@@ -260,7 +235,7 @@ export default function ImportSubscribersPage() {
       {phase === 'importing' && (
         <div>
           <p className="text-sm text-ink-700">
-            שולח הזמנות… הושלמו {batchDone} מתוך {batchTotal}
+            יוצר חשבונות… הושלמו {batchDone} מתוך {batchTotal}
           </p>
         </div>
       )}
@@ -269,7 +244,7 @@ export default function ImportSubscribersPage() {
         <div>
           <h2 className="mb-3 text-lg font-extrabold text-ink-900">הייבוא הושלם</h2>
           <p className="mb-3 text-sm text-ink-700">
-            <span className="text-success">{invitedCount} הוזמנו</span>
+            <span className="text-success">{createdCount} נוצרו</span>
             {' · '}
             <span className="text-slate-500">{skippedCount} דולגו (כבר קיימים)</span>
             {' · '}
@@ -279,7 +254,7 @@ export default function ImportSubscribersPage() {
           {(failedCount > 0 || skippedCount > 0) && (
             <ul className="mb-4 max-h-64 space-y-1 overflow-y-auto text-sm">
               {results
-                .filter((r) => r.outcome !== 'invited')
+                .filter((r) => r.outcome !== 'created')
                 .map((r) => (
                   <li key={r.subscriber.email}>
                     {r.outcome === 'skipped' && (

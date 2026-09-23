@@ -84,7 +84,6 @@ export default function RootLayout() {
                 <Stack.Screen name="register" options={{ headerShown: false }} />
                 <Stack.Screen name="paywall" options={{ headerShown: false }} />
                 <Stack.Screen name="blocked" options={{ headerShown: false }} />
-                <Stack.Screen name="accept-invite" options={{ headerShown: false }} />
               </Stack>
             </View>
           </View>

@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 export interface ParsedSubscriber {
   fullName: string;
   email: string;
+  /** Digits only — this is also what becomes the account's password (see bulk-invite route). */
   phone: string;
 }
 
@@ -10,6 +11,7 @@ export interface ParseResult {
   subscribers: ParsedSubscriber[];
   totalRows: number;
   skippedRows: number;
+  invalidPhoneRows: number;
   duplicateEmails: string[];
 }
 
@@ -19,6 +21,11 @@ export interface ParseResult {
 const NAME_HEADERS = ['שם מלא', 'שם', 'full name', 'name'];
 const EMAIL_HEADERS = ['מייל', 'אימייל', 'דוא"ל', 'דואל', 'email', 'e-mail'];
 const PHONE_HEADERS = ['טלפון', 'נייד', 'phone', 'mobile'];
+
+// Supabase's own minimum password length — a phone number normalized to
+// digits-only that's shorter than this can't become a valid password
+// (extension-less landline typos, a cell missing digits, etc.).
+const MIN_PASSWORD_LENGTH = 6;
 
 function normalizeHeader(value: unknown): string {
   return String(value ?? '').trim().toLowerCase();
@@ -35,9 +42,16 @@ function findColumn(headerRow: unknown[], candidates: string[]): number {
 
 /**
  * Parses an admin-uploaded XLSX of existing subscribers (full name, email,
- * phone) into rows ready to bulk-invite. Runs entirely client-side — no
+ * phone) into rows ready to bulk-create. Runs entirely client-side — no
  * file ever leaves the browser except one row at a time, already
  * validated, to the bulk-invite API route.
+ *
+ * Each subscriber logs in with their email as username and their own
+ * phone number as password (no invite email, no password to distribute
+ * individually — the org just needs to tell everyone once: "log in with
+ * your email and your phone number"). The phone is normalized to digits
+ * only here so "050-123-4567", "050 123 4567" and "0501234567" in the
+ * file all become the exact same, predictable password.
  */
 export async function parseSubscriberFile(file: File): Promise<ParseResult> {
   const buffer = await file.arrayBuffer();
@@ -46,7 +60,7 @@ export async function parseSubscriberFile(file: File): Promise<ParseResult> {
   const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, blankrows: false });
 
   if (rows.length === 0) {
-    return { subscribers: [], totalRows: 0, skippedRows: 0, duplicateEmails: [] };
+    return { subscribers: [], totalRows: 0, skippedRows: 0, invalidPhoneRows: 0, duplicateEmails: [] };
   }
 
   const headerRow = rows[0];
@@ -54,9 +68,9 @@ export async function parseSubscriberFile(file: File): Promise<ParseResult> {
   const emailIdx = findColumn(headerRow, EMAIL_HEADERS);
   const phoneIdx = findColumn(headerRow, PHONE_HEADERS);
 
-  if (nameIdx === -1 || emailIdx === -1) {
+  if (nameIdx === -1 || emailIdx === -1 || phoneIdx === -1) {
     throw new Error(
-      'לא נמצאו עמודות "שם מלא" ו"מייל" בקובץ. יש לוודא שהשורה הראשונה מכילה כותרות עמודות.'
+      'לא נמצאו עמודות "שם מלא", "מייל" ו"טלפון" בקובץ. יש לוודא שהשורה הראשונה מכילה כותרות עמודות (הטלפון משמש כסיסמה, ולכן הוא שדה חובה).'
     );
   }
 
@@ -65,14 +79,19 @@ export async function parseSubscriberFile(file: File): Promise<ParseResult> {
   const duplicateEmails: string[] = [];
   const subscribers: ParsedSubscriber[] = [];
   let skippedRows = 0;
+  let invalidPhoneRows = 0;
 
   for (const row of dataRows) {
     const fullName = String(row[nameIdx] ?? '').trim();
     const email = String(row[emailIdx] ?? '').trim().toLowerCase();
-    const phone = phoneIdx !== -1 ? String(row[phoneIdx] ?? '').trim() : '';
+    const phone = String(row[phoneIdx] ?? '').replace(/\D/g, '');
 
     if (!fullName || !email) {
       skippedRows += 1;
+      continue;
+    }
+    if (phone.length < MIN_PASSWORD_LENGTH) {
+      invalidPhoneRows += 1;
       continue;
     }
 
@@ -84,5 +103,5 @@ export async function parseSubscriberFile(file: File): Promise<ParseResult> {
     subscribers.push({ fullName, email, phone });
   }
 
-  return { subscribers, totalRows: dataRows.length, skippedRows, duplicateEmails };
+  return { subscribers, totalRows: dataRows.length, skippedRows, invalidPhoneRows, duplicateEmails };
 }
