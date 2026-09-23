@@ -141,7 +141,7 @@ export default function ImportSubscribersPage() {
       {phase === 'select' && (
         <div className="flex flex-col gap-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-500">מסלול</label>
+            <label className="mb-1 block text-sm font-medium text-slate-500">מסלול זמני</label>
             <select
               value={track}
               onChange={(e) => setTrack(e.target.value as GenderTrack)}
@@ -150,6 +150,10 @@ export default function ImportSubscribersPage() {
               <option value="women">נשים</option>
               <option value="men">גברים</option>
             </select>
+            <p className="mt-1 text-xs text-slate-500">
+              הקובץ לא אומר מי גבר ומי אישה, ולכן כל מנוי מיובא יתבקש לבחור את המסלול שלו בעצמו בכניסה
+              הראשונה לאפליקציה. המסלול כאן הוא רק ערך זמני עד שהמנוי בוחר.
+            </p>
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-500">שפה</label>
@@ -196,8 +200,9 @@ export default function ImportSubscribersPage() {
       {phase === 'preview' && (
         <div>
           <p className="mb-3 text-sm text-ink-700">
-            נמצאו <strong>{subscribers.length}</strong> מנויים תקינים (מסלול:{' '}
-            {track === 'women' ? 'נשים' : 'גברים'}, שפה: {language === 'he' ? 'עברית' : 'English'})
+            נמצאו <strong>{subscribers.length}</strong> מנויים תקינים (מסלול זמני:{' '}
+            {track === 'women' ? 'נשים' : 'גברים'}, עד שכל מנוי יבחר בעצמו; שפה:{' '}
+            {language === 'he' ? 'עברית' : 'English'})
           </p>
 
           {skippedRows > 0 && (

@@ -39,6 +39,16 @@ export interface AppStrings {
     invalidMessage: string;
     successMessage: string;
   };
+  chooseTrack: {
+    firstTimeTitle: string;
+    firstTimeSubtitle: string;
+    changeTitle: string;
+    changeSubtitle: string;
+    men: string;
+    women: string;
+    current: string;
+    saved: string;
+  };
   register: {
     title: string;
     fullNamePlaceholder: string;
@@ -89,6 +99,7 @@ export interface AppStrings {
     nextDay: string;
     calendarLink: string;
     shareLink: string;
+    trackLink: string;
     noLessonForDate: string;
     completeButton: string;
     completedButton: string;
@@ -227,6 +238,16 @@ const he: AppStrings = {
     invalidMessage: 'הקישור פג תוקף או שכבר נעשה בו שימוש. יש לפנות לתמיכה כדי לקבל קישור חדש.',
     successMessage: 'הסיסמה נקבעה! מעביר/ה אותך לאפליקציה…',
   },
+  chooseTrack: {
+    firstTimeTitle: 'באיזה מסלול תרצה/י ללמוד?',
+    firstTimeSubtitle: 'הלימוד היומי מותאם בנפרד לגברים ולנשים. אפשר לשנות את הבחירה בכל זמן.',
+    changeTitle: 'מסלול הלימוד',
+    changeSubtitle: 'בחר/י את המסלול שהלימוד היומי יוצג לפיו.',
+    men: 'גברים',
+    women: 'נשים',
+    current: 'המסלול הנוכחי',
+    saved: 'המסלול עודכן.',
+  },
   register: {
     title: 'הרשמה',
     fullNamePlaceholder: 'שם מלא',
@@ -278,6 +299,7 @@ const he: AppStrings = {
     nextDay: 'מחר ›',
     calendarLink: 'לוח שנה',
     shareLink: 'שיתוף',
+    trackLink: 'מסלול',
     noLessonForDate: 'לא קיים לימוד לתאריך זה.',
     completeButton: 'סיימתי',
     completedButton: 'הושלם',
@@ -418,6 +440,16 @@ const en: AppStrings = {
     invalidMessage: 'The link expired or was already used. Please contact support for a new one.',
     successMessage: 'Password set! Taking you to the app…',
   },
+  chooseTrack: {
+    firstTimeTitle: 'Which track would you like to learn?',
+    firstTimeSubtitle: 'The daily lesson is prepared separately for men and for women. You can change this at any time.',
+    changeTitle: 'Learning track',
+    changeSubtitle: 'Choose the track the daily lesson is shown for.',
+    men: 'Men',
+    women: 'Women',
+    current: 'Current track',
+    saved: 'Track updated.',
+  },
   register: {
     title: 'Sign up',
     fullNamePlaceholder: 'Full name',
@@ -469,6 +501,7 @@ const en: AppStrings = {
     nextDay: 'Next ›',
     calendarLink: 'Calendar',
     shareLink: 'Share',
+    trackLink: 'Track',
     noLessonForDate: 'No lesson exists for this date.',
     completeButton: 'Mark complete',
     completedButton: 'Completed',

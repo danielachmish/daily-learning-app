@@ -56,6 +56,12 @@ export default function HomeScreen() {
     return <Redirect href="/paywall" />;
   }
 
+  // Bulk-imported subscribers have only a placeholder track until they
+  // choose one themselves — see app/choose-track.tsx.
+  if (!profile.track_confirmed) {
+    return <Redirect href="/choose-track" />;
+  }
+
   return <DailyLessonScreen profile={profile} onSignOut={signOut} initialDate={date} />;
 }
 

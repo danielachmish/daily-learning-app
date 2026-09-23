@@ -110,6 +110,9 @@ export async function POST(request: Request) {
     gender_track: body.genderTrack,
     language: body.language,
     free_access: true,
+    // The file has no gender column, so genderTrack is only a placeholder —
+    // the app asks the person to choose their own track on first entry.
+    track_confirmed: false,
   });
 
   if (profileError) {

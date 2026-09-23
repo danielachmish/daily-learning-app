@@ -16,7 +16,7 @@ interface Result<T> {
 }
 
 const USER_COLUMNS =
-  'id, full_name, phone, email, role, gender_track, language, account_status, free_access, current_streak, best_streak, total_completed_days, created_at, updated_at, last_login_at';
+  'id, full_name, phone, email, role, gender_track, language, account_status, free_access, track_confirmed, current_streak, best_streak, total_completed_days, created_at, updated_at, last_login_at';
 
 /** Strips characters that would break PostgREST's or() filter syntax. */
 function sanitizeSearchTerm(term: string): string {

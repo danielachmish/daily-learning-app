@@ -190,6 +190,9 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
         <Pressable style={styles.utilityLink} onPress={handleShare}>
           <Text style={styles.utilityLinkText}>{s.dailyLesson.shareLink}</Text>
         </Pressable>
+        <Pressable style={styles.utilityLink} onPress={() => router.push('/choose-track')}>
+          <Text style={styles.utilityLinkText}>{s.dailyLesson.trackLink}</Text>
+        </Pressable>
         {/* "תזכורות" link removed for now — Web Push delivery on web/PWA
             turned out unreliable on some Android OEMs (e.g. Samsung's
             aggressive battery restrictions can block delivery when Chrome

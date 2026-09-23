@@ -25,6 +25,12 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<AuthResult>;
   signUp: (input: SignUpInput) => Promise<AuthResult>;
   signOut: () => Promise<void>;
+  /**
+   * Sets the user's own gender track and marks it confirmed — used both by
+   * the first-entry picker (bulk-imported subscribers, track_confirmed =
+   * false) and by the "change track" link on the daily lesson screen.
+   */
+  updateTrack: (genderTrack: GenderTrack) => Promise<AuthResult>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -33,7 +39,7 @@ async function fetchProfile(userId: string): Promise<UserProfile | null> {
   const { data, error } = await supabase
     .from('profiles')
     .select(
-      'id, full_name, phone, email, role, gender_track, language, account_status, free_access, current_streak, best_streak, total_completed_days, created_at, updated_at, last_login_at'
+      'id, full_name, phone, email, role, gender_track, language, account_status, free_access, track_confirmed, current_streak, best_streak, total_completed_days, created_at, updated_at, last_login_at'
     )
     .eq('id', userId)
     .single();
@@ -126,8 +132,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   }
 
+  async function updateTrack(genderTrack: GenderTrack): Promise<AuthResult> {
+    if (!profile) {
+      return { error: 'No profile loaded.' };
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ gender_track: genderTrack, track_confirmed: true })
+      .eq('id', profile.id);
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    setProfile({ ...profile, gender_track: genderTrack, track_confirmed: true });
+    return { error: null };
+  }
+
   return (
-    <AuthContext.Provider value={{ session, profile, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ session, profile, loading, signIn, signUp, signOut, updateTrack }}>
       {children}
     </AuthContext.Provider>
   );

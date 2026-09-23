@@ -11,6 +11,8 @@ export interface UserProfile {
   language: Language;
   account_status: AccountStatus;
   free_access: boolean;
+  /** False for bulk-imported subscribers until they pick their own track in the app. */
+  track_confirmed: boolean;
   current_streak: number;
   best_streak: number;
   total_completed_days: number;

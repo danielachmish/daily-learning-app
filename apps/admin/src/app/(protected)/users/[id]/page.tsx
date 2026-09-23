@@ -135,6 +135,9 @@ export default function UserDetailPage() {
             <option value="men">גברים</option>
             <option value="women">נשים</option>
           </select>
+          {!user.track_confirmed && (
+            <p className="mt-1 text-xs text-amber-500">מנוי מיובא — עדיין לא בחר מסלול באפליקציה.</p>
+          )}
         </div>
         <div className="flex-1">
           <label className="mb-1 block text-sm font-medium text-ink-700">שפה</label>
