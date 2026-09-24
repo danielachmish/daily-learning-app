@@ -53,7 +53,12 @@ import requests
 
 DATE_BADGE_MAX_X = 160
 DATE_BADGE_MAX_Y = 110
-DATE_PATTERN = re.compile(r"(\d{2})/(\d{2})/(\d{2})")
+# Day/month are 1-2 digits as printed in the booklet — the 1st-9th of a
+# month print as a single digit ("1/11/26", not "01/11/26"). A stricter
+# \d{2}/\d{2}/\d{2} silently missed every single-digit day, which merged
+# that day's real pages into whatever day was detected right before it —
+# found via a real booklet where 9 straight days vanished this way.
+DATE_PATTERN = re.compile(r"(\d{1,2})/(\d{1,2})/(\d{2})")
 DAY_PAGE_COUNT_WARNING_THRESHOLD = 4
 RENDER_SCALE = 2.5  # ~180dpi equivalent for a standard page — crisp on a phone screen
 
@@ -72,7 +77,11 @@ def load_env_file(path: Path) -> dict:
 
 
 def detect_date_on_page(page: "fitz.Page") -> str | None:
-    """Returns a DD/MM/YY string if this page starts a new day, else None."""
+    """Returns a normalized, zero-padded DD/MM/YY string ("01/11/26", never
+    "1/11/26") if this page starts a new day, else None — normalizing here,
+    once, means every caller (the ISO conversion, the lesson title) sees
+    consistent formatting regardless of how the source PDF printed a
+    single-digit day/month."""
     text_dict = page.get_text("dict")
     for block in text_dict.get("blocks", []):
         for line in block.get("lines", []):
@@ -81,7 +90,8 @@ def detect_date_on_page(page: "fitz.Page") -> str | None:
                 if bbox[0] < DATE_BADGE_MAX_X and bbox[1] < DATE_BADGE_MAX_Y:
                     match = DATE_PATTERN.search(span["text"])
                     if match:
-                        return match.group(0)
+                        day, month, year = match.groups()
+                        return f"{day.zfill(2)}/{month.zfill(2)}/{year}"
     return None
 
 

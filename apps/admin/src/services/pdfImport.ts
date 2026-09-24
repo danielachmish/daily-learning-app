@@ -8,7 +8,14 @@
 
 const DATE_BADGE_MAX_X = 160;
 const DATE_BADGE_MAX_Y = 110;
-const DATE_PATTERN = /(\d{2})\/(\d{2})\/(\d{2})/;
+// Day/month are 1-2 digits as printed in the booklet — the 1st–9th of a
+// month print as a single digit ("1/11/26", not "01/11/26"). A stricter
+// \d{2}/\d{2}/\d{2} silently missed every single-digit day, which merged
+// that day's real pages into whatever day was detected right before it
+// (found via a real booklet where 9 straight days vanished this way —
+// see the day-boundary detection's own DAY_PAGE_COUNT_WARNING_THRESHOLD
+// flag, which is what actually surfaced it).
+const DATE_PATTERN = /(\d{1,2})\/(\d{1,2})\/(\d{2})/;
 export const DAY_PAGE_COUNT_WARNING_THRESHOLD = 4;
 export const RENDER_SCALE = 2.5;
 
@@ -25,10 +32,16 @@ export interface DetectionResult {
 
 function ddmmyyToIso(dateStr: string): string {
   const [day, month, year] = dateStr.split('/');
-  return `20${year}-${month}-${day}`;
+  return `20${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }
 
-/** Returns a DD/MM/YY string if this page starts a new day, else null. */
+/**
+ * Returns a normalized, zero-padded DD/MM/YY string ("01/11/26", never
+ * "1/11/26") if this page starts a new day, else null — normalizing here,
+ * once, means every caller (the ISO conversion, the lesson title shown in
+ * the preview table) sees consistent formatting regardless of how the
+ * source PDF printed a single-digit day/month.
+ */
 async function detectDateOnPage(pdf: import('pdfjs-dist').PDFDocumentProxy, pageNumber: number): Promise<string | null> {
   const page = await pdf.getPage(pageNumber);
   const viewport = page.getViewport({ scale: 1 });
@@ -40,7 +53,10 @@ async function detectDateOnPage(pdf: import('pdfjs-dist').PDFDocumentProxy, page
     const yFromTop = viewport.height - item.transform[5];
     if (x < DATE_BADGE_MAX_X && yFromTop < DATE_BADGE_MAX_Y) {
       const match = DATE_PATTERN.exec(item.str);
-      if (match) return match[0];
+      if (match) {
+        const [, day, month, year] = match;
+        return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+      }
     }
   }
   return null;
