@@ -9,7 +9,7 @@ import {
   setAccountStatus,
   setFreeAccess,
   setRole,
-  updateUserTrackAndLanguage,
+  updateUserDetails,
 } from '../../../../services/users';
 import { createClient } from '../../../../services/supabase/client';
 
@@ -19,6 +19,8 @@ export default function UserDetailPage() {
   const id = params.id;
 
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
   const [genderTrack, setGenderTrack] = useState<GenderTrack>('men');
   const [language, setLanguage] = useState<Language>('he');
   const [loading, setLoading] = useState(true);
@@ -33,6 +35,8 @@ export default function UserDetailPage() {
       const result = await fetchUserById(supabase, id);
       if (result.error) setLoadError(result.error);
       if (result.data) {
+        setFullName(result.data.full_name);
+        setPhone(result.data.phone ?? '');
         setGenderTrack(result.data.gender_track);
         setLanguage(result.data.language);
       }
@@ -42,16 +46,32 @@ export default function UserDetailPage() {
     load();
   }, [id]);
 
-  async function handleSaveTrackLanguage() {
+  async function handleSaveDetails() {
+    const trimmedName = fullName.trim();
+    if (!trimmedName) {
+      alert('שם מלא הוא שדה חובה.');
+      return;
+    }
+    const trimmedPhone = phone.trim() || null;
+
     setSaving(true);
     const supabase = createClient();
-    const result = await updateUserTrackAndLanguage(supabase, id, genderTrack, language);
+    const result = await updateUserDetails(supabase, id, {
+      fullName: trimmedName,
+      phone: trimmedPhone,
+      genderTrack,
+      language,
+    });
     setSaving(false);
     if (result.error) {
       alert(result.error);
       return;
     }
-    setUser((prev) => (prev ? { ...prev, gender_track: genderTrack, language } : prev));
+    setFullName(trimmedName);
+    setPhone(trimmedPhone ?? '');
+    setUser((prev) =>
+      prev ? { ...prev, full_name: trimmedName, phone: trimmedPhone, gender_track: genderTrack, language } : prev
+    );
   }
 
   async function handleToggleFreeAccess() {
@@ -103,6 +123,13 @@ export default function UserDetailPage() {
     setUser((prev) => (prev ? { ...prev, account_status: nextStatus } : prev));
   }
 
+  const detailsChanged =
+    !!user &&
+    (fullName.trim() !== user.full_name ||
+      (phone.trim() || null) !== (user.phone ?? null) ||
+      genderTrack !== user.gender_track ||
+      language !== user.language);
+
   if (loading) return <p className="text-sm text-slate-500">טוען…</p>;
   if (loadError || !user) return <p className="text-sm text-danger">{loadError ?? 'המשתמש לא נמצא.'}</p>;
 
@@ -116,13 +143,34 @@ export default function UserDetailPage() {
 
       <dl className="mb-6 space-y-2 text-sm">
         <Row label="אימייל" value={user.email} />
-        <Row label="טלפון" value={user.phone ?? '—'} />
         <Row label="רצף נוכחי" value={String(user.current_streak)} />
         <Row label="שיא רצף" value={String(user.best_streak)} />
         <Row label="סך ימי לימוד" value={String(user.total_completed_days)} />
         <Row label="נרשם בתאריך" value={new Date(user.created_at).toLocaleDateString('he-IL')} />
         <Row label="הרשאה" value={user.role === 'admin' ? 'מנהל/ת' : 'משתמש/ת רגיל/ה'} />
       </dl>
+
+      <div className="mb-4 space-y-4">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-ink-700">שם מלא</label>
+          <input
+            type="text"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            className="w-full rounded-lg border border-line bg-paper-50 px-3 py-2 text-sm text-ink-900"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-ink-700">טלפון</label>
+          <input
+            type="tel"
+            dir="ltr"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="w-full rounded-lg border border-line bg-paper-50 px-3 py-2 text-sm text-ink-900"
+          />
+        </div>
+      </div>
 
       <div className="mb-6 flex gap-4">
         <div className="flex-1">
@@ -152,11 +200,11 @@ export default function UserDetailPage() {
         </div>
       </div>
       <button
-        onClick={handleSaveTrackLanguage}
-        disabled={saving || (genderTrack === user.gender_track && language === user.language)}
+        onClick={handleSaveDetails}
+        disabled={saving || !detailsChanged}
         className="mb-8 rounded-full bg-teal-400 px-4 py-2 text-sm font-bold text-on-teal disabled:opacity-50"
       >
-        {saving ? 'שומר…' : 'שמור מסלול ושפה'}
+        {saving ? 'שומר…' : 'שמור פרטים'}
       </button>
 
       <div className="flex gap-3">

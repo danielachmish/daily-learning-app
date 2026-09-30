@@ -50,23 +50,35 @@ export async function fetchUserById(supabase: SupabaseClient, id: string): Promi
   return { data: data as UserProfile, error: null };
 }
 
-export async function updateUserTrackAndLanguage(
+export interface UserDetailsUpdate {
+  fullName: string;
+  phone: string | null;
+  genderTrack: GenderTrack;
+  language: Language;
+}
+
+/** Email is deliberately excluded — it's also the auth login and must change via auth.users, not profiles. */
+export async function updateUserDetails(
   supabase: SupabaseClient,
   id: string,
-  genderTrack: GenderTrack,
-  language: Language
+  details: UserDetailsUpdate
 ): Promise<{ error: string | null }> {
   const { error } = await supabase
     .from('profiles')
-    .update({ gender_track: genderTrack, language })
+    .update({
+      full_name: details.fullName,
+      phone: details.phone,
+      gender_track: details.genderTrack,
+      language: details.language,
+    })
     .eq('id', id);
   await logActivity(supabase, {
-    action: 'user.update_track_language',
+    action: 'user.update_details',
     entityType: 'user',
     entityId: id,
     status: error ? 'error' : 'success',
     message: error?.message ?? null,
-    metadata: { genderTrack, language },
+    metadata: { ...details },
   });
   return { error: error?.message ?? null };
 }

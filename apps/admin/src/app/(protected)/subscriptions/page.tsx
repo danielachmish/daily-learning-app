@@ -178,7 +178,9 @@ export default function SubscriptionsListPage() {
                 {subscriptions.map((subscription) => (
                   <tr key={subscription.id} className="border-b border-line">
                     <td className="py-2 pe-4">
-                      {subscription.profiles?.full_name ?? '—'}
+                      <Link href={`/users/${subscription.user_id}`} className="text-teal-600 hover:underline">
+                        {subscription.profiles?.full_name ?? '—'}
+                      </Link>
                       <div className="text-xs text-slate-300">{subscription.profiles?.email}</div>
                     </td>
                     <td className="py-2 pe-4">{subscription.plan_type === 'monthly' ? 'חודשי' : 'שנתי'}</td>
@@ -216,7 +218,12 @@ export default function SubscriptionsListPage() {
               <div key={subscription.id} className="rounded-2xl border border-line bg-paper-50 p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate font-bold text-ink-900">{subscription.profiles?.full_name ?? '—'}</p>
+                    <Link
+                      href={`/users/${subscription.user_id}`}
+                      className="block truncate font-bold text-teal-600 hover:underline"
+                    >
+                      {subscription.profiles?.full_name ?? '—'}
+                    </Link>
                     <p className="truncate text-sm text-slate-500">{subscription.profiles?.email}</p>
                   </div>
                   <span className="shrink-0 rounded-full bg-teal-100 px-2 py-0.5 text-xs font-medium text-teal-600">
