@@ -33,6 +33,7 @@ const ACTION_LABELS: Record<string, string> = {
   'user.create': 'יצירת משתמש',
   'user.bulk_import': 'יצירת מנוי מקובץ',
   'user.update_track_language': 'עדכון מסלול/שפה',
+  'user.update_details': 'עדכון פרטי משתמש',
   'user.set_free_access': 'שינוי גישה חינמית',
   'user.set_account_status': 'שינוי סטטוס חשבון',
   'user.set_role': 'שינוי הרשאת מנהל',
