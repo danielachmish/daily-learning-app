@@ -83,6 +83,25 @@ export async function updateUserDetails(
   return { error: error?.message ?? null };
 }
 
+/**
+ * Sets a new password for an existing user, no email involved — the admin
+ * communicates it to the subscriber directly (phone call, in person, etc).
+ * Goes through the API route (not a direct Supabase call) because setting
+ * another user's password requires the service-role key, which must never
+ * reach the browser; the route itself re-checks admin status server-side
+ * and logs the action (without the password value).
+ */
+export async function resetUserPassword(id: string, password: string): Promise<{ error: string | null }> {
+  const response = await fetch(`/api/users/${id}/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  });
+  const body = await response.json();
+  if (!response.ok) return { error: body.error ?? 'איפוס הסיסמה נכשל.' };
+  return { error: null };
+}
+
 /** Admin-only column, enforced via RPC (see docs — column grant excludes this from plain UPDATE). */
 export async function setFreeAccess(
   supabase: SupabaseClient,

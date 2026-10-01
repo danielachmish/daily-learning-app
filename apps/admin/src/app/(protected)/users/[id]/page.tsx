@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 
 import {
   fetchUserById,
+  resetUserPassword,
   setAccountStatus,
   setFreeAccess,
   setRole,
@@ -27,6 +28,9 @@ export default function UserDetailPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [justResetPassword, setJustResetPassword] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -72,6 +76,33 @@ export default function UserDetailPage() {
     setUser((prev) =>
       prev ? { ...prev, full_name: trimmedName, phone: trimmedPhone, gender_track: genderTrack, language } : prev
     );
+  }
+
+  function generateRandomPassword() {
+    // A 6-digit numeric code — easy for an admin to read over the phone,
+    // same format spirit as the phone-number passwords used elsewhere.
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setNewPassword(code);
+    setJustResetPassword(null);
+  }
+
+  async function handleResetPassword() {
+    if (!user) return;
+    if (newPassword.length < 6) {
+      alert('הסיסמה חייבת להכיל לפחות 6 תווים.');
+      return;
+    }
+    if (!confirm(`לאפס את הסיסמה של ${user.full_name} לסיסמה החדשה שהוזנה?`)) return;
+
+    setResettingPassword(true);
+    const result = await resetUserPassword(id, newPassword);
+    setResettingPassword(false);
+    if (result.error) {
+      alert(result.error);
+      return;
+    }
+    setJustResetPassword(newPassword);
+    setNewPassword('');
   }
 
   async function handleToggleFreeAccess() {
@@ -206,6 +237,45 @@ export default function UserDetailPage() {
       >
         {saving ? 'שומר…' : 'שמור פרטים'}
       </button>
+
+      <div className="mb-8 rounded-xl border border-line p-4">
+        <h2 className="mb-1 text-sm font-bold text-ink-900">איפוס סיסמה</h2>
+        <p className="mb-3 text-xs text-slate-500">
+          קובע סיסמה חדשה ישירות, בלי לשלוח מייל — יש למסור אותה למשתמש/ת בעצמכם (טלפון, הודעה וכו׳).
+        </p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            dir="ltr"
+            value={newPassword}
+            onChange={(e) => {
+              setNewPassword(e.target.value);
+              setJustResetPassword(null);
+            }}
+            placeholder="סיסמה חדשה"
+            className="flex-1 rounded-lg border border-line bg-paper-50 px-3 py-2 text-sm text-ink-900"
+          />
+          <button
+            onClick={generateRandomPassword}
+            className="rounded-full border border-slate-300 px-3 py-2 text-xs font-bold text-ink-700"
+          >
+            צור סיסמה אקראית
+          </button>
+        </div>
+        <button
+          onClick={handleResetPassword}
+          disabled={resettingPassword || newPassword.length < 6}
+          className="mt-3 rounded-full bg-teal-400 px-4 py-2 text-sm font-bold text-on-teal disabled:opacity-50"
+        >
+          {resettingPassword ? 'מאפס…' : 'אפס סיסמה'}
+        </button>
+        {justResetPassword && (
+          <p className="mt-3 rounded-lg bg-success/10 px-3 py-2 text-sm text-success">
+            הסיסמה אופסה ל־<span dir="ltr" className="font-mono font-bold">{justResetPassword}</span> — מסרו אותה
+            למשתמש/ת עכשיו, היא לא תוצג שוב.
+          </p>
+        )}
+      </div>
 
       <div className="flex gap-3">
         <button
