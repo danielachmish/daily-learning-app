@@ -5,16 +5,18 @@ import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-nativ
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { t } from '../i18n/strings';
-import { fetchTodayDedications } from '../services/dedications';
+import { fetchDedicationsForDate } from '../services/dedications';
 import { colors } from '../theme/colors';
 import { getDedicationTypeLabels } from '../utils/dedicationLabels';
 import { isRTL } from '../utils/rtl';
 
 interface Props {
   profile: UserProfile;
+  /** "YYYY-MM-DD" — the date the lesson screen was showing when this was opened. */
+  date: string;
 }
 
-export function TodayDedicationsScreen({ profile }: Props) {
+export function TodayDedicationsScreen({ profile, date }: Props) {
   const rtl = isRTL(profile.language);
   const s = t(profile.language);
   const dedicationTypeLabels = getDedicationTypeLabels(profile.language);
@@ -24,7 +26,9 @@ export function TodayDedicationsScreen({ profile }: Props) {
 
   useEffect(() => {
     let isMounted = true;
-    fetchTodayDedications().then((result) => {
+    setLoading(true);
+    setError(null);
+    fetchDedicationsForDate(date).then((result) => {
       if (!isMounted) return;
       if (result.error) setError(result.error);
       setDedications(result.dedications);
@@ -33,12 +37,16 @@ export function TodayDedicationsScreen({ profile }: Props) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [date]);
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.headerRow}>
-        <Text style={[styles.title, rtl && styles.textRTL]}>{s.recentDedications.title}</Text>
+        <View>
+          <Text style={[styles.title, rtl && styles.textRTL]}>{s.recentDedications.title}</Text>
+          {/* Rendered LTR regardless of interface language, so the date's digits don't reorder under RTL. */}
+          <Text style={[styles.date, rtl && styles.dateRTL]}>{date}</Text>
+        </View>
         <Link href="/dedications/new" style={styles.newLink}>
           <Text style={styles.newLinkText}>{s.recentDedications.newDedicationLink}</Text>
         </Link>
@@ -98,6 +106,15 @@ const styles = StyleSheet.create({
     fontSize: 19,
     fontWeight: '800',
     color: colors.ink900,
+  },
+  date: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.teal600,
+    marginTop: 2,
+  },
+  dateRTL: {
+    textAlign: 'right',
   },
   newLink: {
     backgroundColor: colors.teal100,
