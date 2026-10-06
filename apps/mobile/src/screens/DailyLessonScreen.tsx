@@ -24,7 +24,7 @@ import {
   fetchLessonForDate,
   fetchLessonImages,
 } from '../services/lessons';
-import { fetchTodayDedicationsCount } from '../services/dedications';
+import { fetchDedicationsCountForDate } from '../services/dedications';
 import { fetchActiveSubscription } from '../services/subscriptions';
 import { colors } from '../theme/colors';
 import { addDays, toDateOnlyString } from '../utils/date';
@@ -63,13 +63,13 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
 
   useEffect(() => {
     let isMounted = true;
-    fetchTodayDedicationsCount().then(({ count }) => {
+    fetchDedicationsCountForDate(selectedDate).then(({ count }) => {
       if (isMounted) setDedicationsCount(count);
     });
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [selectedDate]);
 
   useEffect(() => {
     let isMounted = true;
@@ -267,7 +267,10 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
         </ScrollView>
       )}
 
-      <Pressable style={styles.dedicationsLink} onPress={() => router.push('/dedications/today')}>
+      <Pressable
+        style={styles.dedicationsLink}
+        onPress={() => router.push({ pathname: '/dedications/today', params: { date: selectedDate } })}
+      >
         <Text style={[styles.dedicationsLinkText, rtl && styles.textRTL]}>
           {dedicationsCount > 0
             ? s.dailyLesson.dedicationsLinkWithCount(dedicationsCount)

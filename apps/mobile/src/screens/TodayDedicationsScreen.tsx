@@ -1,49 +1,22 @@
 import type { Dedication, UserProfile } from '@daily-learning/shared';
 import { Link } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, SectionList, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { t } from '../i18n/strings';
-import { fetchRecentDedications } from '../services/dedications';
+import { fetchDedicationsForDate } from '../services/dedications';
 import { colors } from '../theme/colors';
 import { getDedicationTypeLabels } from '../utils/dedicationLabels';
 import { isRTL } from '../utils/rtl';
 
 interface Props {
   profile: UserProfile;
+  /** "YYYY-MM-DD" — the date the lesson screen was showing when this was opened. */
+  date: string;
 }
 
-interface DateSection {
-  title: string;
-  data: Dedication[];
-}
-
-/**
- * Groups dedications by the date/date-range they cover, so a busy day with
- * several dedications shows one date header instead of repeating the same
- * date on every card — dedications is already ordered newest-covered-date
- * first, and Map preserves insertion order, so the sections come out in the
- * same order with no extra sort needed.
- */
-function groupByDate(dedications: Dedication[]): DateSection[] {
-  const groups = new Map<string, Dedication[]>();
-  for (const dedication of dedications) {
-    const key =
-      dedication.dedication_date === dedication.end_date
-        ? dedication.dedication_date
-        : `${dedication.dedication_date} – ${dedication.end_date}`;
-    const existing = groups.get(key);
-    if (existing) {
-      existing.push(dedication);
-    } else {
-      groups.set(key, [dedication]);
-    }
-  }
-  return Array.from(groups.entries()).map(([title, data]) => ({ title, data }));
-}
-
-export function TodayDedicationsScreen({ profile }: Props) {
+export function TodayDedicationsScreen({ profile, date }: Props) {
   const rtl = isRTL(profile.language);
   const s = t(profile.language);
   const dedicationTypeLabels = getDedicationTypeLabels(profile.language);
@@ -53,7 +26,9 @@ export function TodayDedicationsScreen({ profile }: Props) {
 
   useEffect(() => {
     let isMounted = true;
-    fetchRecentDedications().then((result) => {
+    setLoading(true);
+    setError(null);
+    fetchDedicationsForDate(date).then((result) => {
       if (!isMounted) return;
       if (result.error) setError(result.error);
       setDedications(result.dedications);
@@ -62,14 +37,16 @@ export function TodayDedicationsScreen({ profile }: Props) {
     return () => {
       isMounted = false;
     };
-  }, []);
-
-  const sections = useMemo(() => groupByDate(dedications), [dedications]);
+  }, [date]);
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.headerRow}>
-        <Text style={[styles.title, rtl && styles.textRTL]}>{s.recentDedications.title}</Text>
+        <View>
+          <Text style={[styles.title, rtl && styles.textRTL]}>{s.recentDedications.title}</Text>
+          {/* Rendered LTR regardless of interface language, so the date's digits don't reorder under RTL. */}
+          <Text style={[styles.date, rtl && styles.dateRTL]}>{date}</Text>
+        </View>
         <Link href="/dedications/new" style={styles.newLink}>
           <Text style={styles.newLinkText}>{s.recentDedications.newDedicationLink}</Text>
         </Link>
@@ -88,17 +65,10 @@ export function TodayDedicationsScreen({ profile }: Props) {
           <Text style={[styles.emptyText, rtl && styles.textRTL]}>{s.recentDedications.emptyText}</Text>
         </View>
       ) : (
-        <SectionList
-          sections={sections}
+        <FlatList
+          data={dedications}
           keyExtractor={(dedication) => dedication.id}
           contentContainerStyle={styles.list}
-          stickySectionHeadersEnabled={false}
-          renderSectionHeader={({ section }) => (
-            // Rendered LTR regardless of interface language — same bidi fix as
-            // MyDedicationsScreen, otherwise a range like "2026-09-02 – 2026-10-01"
-            // visually reverses under RTL.
-            <Text style={styles.sectionHeader}>{section.title}</Text>
-          )}
           renderItem={({ item: dedication }) => (
             <View style={styles.card}>
               <Text style={[styles.cardType, rtl && styles.textRTL]}>
@@ -137,6 +107,15 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.ink900,
   },
+  date: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.teal600,
+    marginTop: 2,
+  },
+  dateRTL: {
+    textAlign: 'right',
+  },
   newLink: {
     backgroundColor: colors.teal100,
     borderRadius: 999,
@@ -168,13 +147,6 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: 8,
-  },
-  sectionHeader: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.teal600,
-    marginTop: 12,
-    marginBottom: 6,
   },
   card: {
     borderWidth: 1,
