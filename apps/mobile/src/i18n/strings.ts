@@ -322,9 +322,9 @@ const he: AppStrings = {
     myDedicationsLink: 'ההקדשות שלי',
   },
   recentDedications: {
-    title: 'הקדשות אחרונות',
+    title: 'הקדשות היום',
     newDedicationLink: '+ הקדש/י',
-    emptyText: 'עדיין אין הקדשות מאושרות.',
+    emptyText: 'אין עדיין הקדשות להיום.',
     donorPrefix: (name) => `מאת: ${name}`,
   },
   calendar: {
@@ -511,9 +511,9 @@ const en: AppStrings = {
     myDedicationsLink: 'My dedications',
   },
   recentDedications: {
-    title: 'Recent dedications',
+    title: "Today's dedications",
     newDedicationLink: '+ Dedicate',
-    emptyText: 'No approved dedications yet.',
+    emptyText: 'No dedications for today yet.',
     donorPrefix: (name) => `From: ${name}`,
   },
   calendar: {
