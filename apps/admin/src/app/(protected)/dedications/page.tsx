@@ -67,7 +67,15 @@ export default function DedicationsListPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-extrabold text-ink-900">הקדשות</h1>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-extrabold text-ink-900">הקדשות</h1>
+        <Link
+          href="/dedications/new"
+          className="rounded-full border border-teal-400 px-4 py-2 text-sm font-bold text-teal-600"
+        >
+          הוספת הקדשה ללא תשלום
+        </Link>
+      </div>
 
       <div className="mb-4 flex flex-wrap gap-3">
         <input
@@ -148,10 +156,10 @@ export default function DedicationsListPage() {
               <tbody>
                 {dedications.map((dedication) => (
                   <tr key={dedication.id} className="border-b border-line">
-                    <td className="py-2 pe-4">{dedication.dedication_date}</td>
+                    <td className="py-2 pe-4">{dateRange(dedication)}</td>
                     <td className="py-2 pe-4">{DEDICATION_TYPE_LABELS[dedication.type]}</td>
                     <td className="max-w-xs truncate py-2 pe-4">{dedication.dedication_text}</td>
-                    <td className="py-2 pe-4">{PAYMENT_STATUS_LABELS[dedication.payment_status]}</td>
+                    <td className="py-2 pe-4">{paymentLabel(dedication)}</td>
                     <td className="py-2 pe-4">{APPROVAL_STATUS_LABELS[dedication.approval_status]}</td>
                     <td className="py-2 pe-4">
                       <DedicationActions
@@ -172,12 +180,12 @@ export default function DedicationsListPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-bold text-ink-900">{DEDICATION_TYPE_LABELS[dedication.type]}</p>
-                    <p className="text-xs text-slate-300">{dedication.dedication_date}</p>
+                    <p className="text-xs text-slate-300">{dateRange(dedication)}</p>
                   </div>
                 </div>
                 <p className="mt-2 line-clamp-2 text-sm text-ink-700">{dedication.dedication_text}</p>
                 <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-                  <span>{PAYMENT_STATUS_LABELS[dedication.payment_status]}</span>
+                  <span>{paymentLabel(dedication)}</span>
                   <span>{APPROVAL_STATUS_LABELS[dedication.approval_status]}</span>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-line pt-3 text-sm">
@@ -219,6 +227,18 @@ export default function DedicationsListPage() {
       )}
     </div>
   );
+}
+
+function dateRange(dedication: Dedication): string {
+  return dedication.end_date && dedication.end_date !== dedication.dedication_date
+    ? `${dedication.dedication_date} – ${dedication.end_date}`
+    : dedication.dedication_date;
+}
+
+function paymentLabel(dedication: Dedication): string {
+  return dedication.payment_provider === 'admin_free'
+    ? 'ללא תשלום (מנהל)'
+    : PAYMENT_STATUS_LABELS[dedication.payment_status];
 }
 
 /**

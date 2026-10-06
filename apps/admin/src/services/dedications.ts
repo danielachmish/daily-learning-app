@@ -23,7 +23,7 @@ interface Result<T> {
 }
 
 const DEDICATION_COLUMNS =
-  'id, user_id, dedication_date, type, dedication_text, donor_name, amount, payment_status, approval_status, payment_provider, provider_payment_id, created_at, approved_at';
+  'id, user_id, dedication_date, end_date, type, dedication_text, donor_name, amount, payment_status, approval_status, payment_provider, provider_payment_id, created_at, approved_at';
 
 export async function fetchDedications(
   supabase: SupabaseClient,
@@ -112,6 +112,46 @@ export async function updateDedicationText(
     entityId: id,
     status: error ? 'error' : 'success',
     message: error?.message ?? null,
+  });
+
+  if (error) return { data: null, error: error.message };
+  return { data: data as Dedication, error: null };
+}
+
+export interface FreeDedicationInput {
+  userId: string | null;
+  startDate: string;
+  endDate: string;
+  type: DedicationType;
+  dedicationText: string;
+  donorName: string;
+}
+
+/**
+ * Creates a paid+approved dedication with amount 0 (provider 'admin_free')
+ * via the admin-only RPC — direct INSERT on dedications is revoked for
+ * everyone, so this is the only admin path in.
+ */
+export async function createFreeDedication(
+  supabase: SupabaseClient,
+  input: FreeDedicationInput
+): Promise<Result<Dedication>> {
+  const { data, error } = await supabase.rpc('admin_create_free_dedication', {
+    p_user_id: input.userId,
+    p_start_date: input.startDate,
+    p_end_date: input.endDate,
+    p_type: input.type,
+    p_dedication_text: input.dedicationText,
+    p_donor_name: input.donorName,
+  });
+
+  await logActivity(supabase, {
+    action: 'dedication.create_free',
+    entityType: 'dedication',
+    entityId: (data as Dedication | null)?.id ?? null,
+    status: error ? 'error' : 'success',
+    message: error?.message ?? null,
+    metadata: { startDate: input.startDate, endDate: input.endDate, type: input.type, userId: input.userId },
   });
 
   if (error) return { data: null, error: error.message };

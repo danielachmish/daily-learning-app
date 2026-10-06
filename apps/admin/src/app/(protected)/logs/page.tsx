@@ -25,6 +25,7 @@ const ACTION_LABELS: Record<string, string> = {
   'dedication.rejected': 'דחיית הקדשה',
   'dedication.hidden': 'הסתרת הקדשה',
   'dedication.update_text': 'עדכון נוסח הקדשה',
+  'dedication.create_free': 'הוספת הקדשה ללא תשלום',
   'subscription.extend': 'הארכת מנוי',
   'subscription.cancel': 'ביטול מנוי',
   'subscription.nedarim_freeze': 'הקפאת הוראת קבע',
