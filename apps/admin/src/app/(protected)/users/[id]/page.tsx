@@ -277,7 +277,7 @@ export default function UserDetailPage() {
         )}
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <button
           onClick={handleToggleFreeAccess}
           disabled={busy}
@@ -301,9 +301,43 @@ export default function UserDetailPage() {
         >
           {user.role === 'admin' ? 'הסר הרשאת מנהל' : 'הפוך למנהל'}
         </button>
+        <a
+          href={buildWhatsAppShareUrl(user, phone, justResetPassword)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-full bg-[#1D9E75] px-4 py-2 text-sm font-bold text-white"
+        >
+          שתף בווצאפ
+        </a>
       </div>
     </div>
   );
+}
+
+const APP_SHARE_LINK = 'https://halimudhayomi.co.il';
+
+/**
+ * wa.me link that opens WhatsApp on the user's chat with a ready-made
+ * message (app link + login email). The password is only included right
+ * after an admin reset on this page — it's never retrievable otherwise.
+ * With no phone on file, WhatsApp opens and lets the admin pick a contact.
+ */
+function buildWhatsAppShareUrl(user: UserProfile, phone: string, justResetPassword: string | null) {
+  const lines = [
+    `שלום ${user.full_name},`,
+    'נפתחה לך גישה לאפליקציית הלימוד היומי.',
+    '',
+    `להורדת האפליקציה: ${APP_SHARE_LINK}`,
+    '',
+    `אימייל להתחברות: ${user.email}`,
+  ];
+  if (justResetPassword) lines.push(`סיסמה: ${justResetPassword}`);
+
+  // Israeli local numbers (05X...) → international format WhatsApp expects (9725X...).
+  let digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('0')) digits = `972${digits.slice(1)}`;
+
+  return `https://wa.me/${digits}?text=${encodeURIComponent(lines.join('\n'))}`;
 }
 
 function Row({ label, value }: { label: string; value: string }) {
