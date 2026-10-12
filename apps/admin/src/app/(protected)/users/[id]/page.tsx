@@ -302,10 +302,16 @@ export default function UserDetailPage() {
           {user.role === 'admin' ? 'הסר הרשאת מנהל' : 'הפוך למנהל'}
         </button>
         <button
-          onClick={() => shareAccessMessage(buildAccessMessage(user, justResetPassword))}
+          onClick={() => openWhatsAppChat('business', phone, buildAccessMessage(user, justResetPassword))}
           className="rounded-full bg-[#1D9E75] px-4 py-2 text-sm font-bold text-white"
         >
-          שתף גישה
+          ווצאפ ביזנס
+        </button>
+        <button
+          onClick={() => openWhatsAppChat('regular', phone, buildAccessMessage(user, justResetPassword))}
+          className="rounded-full border border-[#1D9E75] px-4 py-2 text-sm font-bold text-[#1D9E75]"
+        >
+          ווצאפ
         </button>
       </div>
     </div>
@@ -333,24 +339,42 @@ function buildAccessMessage(user: UserProfile, justResetPassword: string | null)
 }
 
 /**
- * Opens the device's own share sheet so the admin picks the channel
- * (WhatsApp, WhatsApp Business, SMS, email…). Browsers without the Web
- * Share API (e.g. desktop Firefox) get the message copied instead.
+ * Opens a WhatsApp chat with this specific user, message pre-filled.
+ *
+ * "business" has no universal link, so it depends on the device:
+ * - Android: an intent pinned to the WhatsApp Business app (falls back to wa.me).
+ * - Desktop: WhatsApp Web — sends from whichever account is logged in there,
+ *   so the Business number should be the one connected to WhatsApp Web.
+ * - iPhone: no way to target Business specifically; wa.me opens the
+ *   WhatsApp app the phone uses.
+ * "regular" is always wa.me.
  */
-async function shareAccessMessage(text: string) {
-  if (navigator.share) {
-    try {
-      await navigator.share({ text });
-    } catch {
-      // Admin closed the share sheet — nothing to do.
-    }
+function openWhatsAppChat(kind: 'business' | 'regular', phone: string, text: string) {
+  // Israeli local numbers (05X...) → international format WhatsApp expects (9725X...).
+  let digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('0')) digits = `972${digits.slice(1)}`;
+  if (!digits) {
+    alert('אין מספר טלפון למשתמש/ת — הוסיפו טלפון ושמרו פרטים.');
     return;
   }
-  try {
-    await navigator.clipboard.writeText(text);
-    alert('ההודעה הועתקה — אפשר להדביק אותה בכל אפליקציה.');
-  } catch {
-    alert('לא ניתן לשתף או להעתיק מהדפדפן הזה.');
+
+  const encodedText = encodeURIComponent(text);
+  const waMeUrl = `https://wa.me/${digits}?text=${encodedText}`;
+  if (kind === 'regular') {
+    window.open(waMeUrl, '_blank', 'noopener');
+    return;
+  }
+
+  const ua = navigator.userAgent;
+  if (/Android/i.test(ua)) {
+    window.location.href =
+      `intent://send?phone=${digits}&text=${encodedText}` +
+      `#Intent;scheme=whatsapp;package=com.whatsapp.w4b;` +
+      `S.browser_fallback_url=${encodeURIComponent(waMeUrl)};end`;
+  } else if (/iPhone|iPad|iPod/i.test(ua)) {
+    window.location.href = waMeUrl;
+  } else {
+    window.open(`https://web.whatsapp.com/send?phone=${digits}&text=${encodedText}`, '_blank', 'noopener');
   }
 }
 
