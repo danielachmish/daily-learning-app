@@ -301,14 +301,12 @@ export default function UserDetailPage() {
         >
           {user.role === 'admin' ? 'הסר הרשאת מנהל' : 'הפוך למנהל'}
         </button>
-        <a
-          href={buildWhatsAppShareUrl(user, phone, justResetPassword)}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          onClick={() => shareAccessMessage(buildAccessMessage(user, justResetPassword))}
           className="rounded-full bg-[#1D9E75] px-4 py-2 text-sm font-bold text-white"
         >
-          שתף בווצאפ
-        </a>
+          שתף גישה
+        </button>
       </div>
     </div>
   );
@@ -317,12 +315,11 @@ export default function UserDetailPage() {
 const APP_SHARE_LINK = 'https://halimudhayomi.co.il';
 
 /**
- * wa.me link that opens WhatsApp on the user's chat with a ready-made
- * message (app link + login email). The password is only included right
- * after an admin reset on this page — it's never retrievable otherwise.
- * With no phone on file, WhatsApp opens and lets the admin pick a contact.
+ * Ready-made access message (app link + login email). The password is only
+ * included right after an admin reset on this page — it's never
+ * retrievable otherwise.
  */
-function buildWhatsAppShareUrl(user: UserProfile, phone: string, justResetPassword: string | null) {
+function buildAccessMessage(user: UserProfile, justResetPassword: string | null) {
   const lines = [
     `שלום ${user.full_name},`,
     'נפתחה לך גישה לאפליקציית הלימוד היומי.',
@@ -332,12 +329,29 @@ function buildWhatsAppShareUrl(user: UserProfile, phone: string, justResetPasswo
     `אימייל להתחברות: ${user.email}`,
   ];
   if (justResetPassword) lines.push(`סיסמה: ${justResetPassword}`);
+  return lines.join('\n');
+}
 
-  // Israeli local numbers (05X...) → international format WhatsApp expects (9725X...).
-  let digits = phone.replace(/\D/g, '');
-  if (digits.startsWith('0')) digits = `972${digits.slice(1)}`;
-
-  return `https://wa.me/${digits}?text=${encodeURIComponent(lines.join('\n'))}`;
+/**
+ * Opens the device's own share sheet so the admin picks the channel
+ * (WhatsApp, WhatsApp Business, SMS, email…). Browsers without the Web
+ * Share API (e.g. desktop Firefox) get the message copied instead.
+ */
+async function shareAccessMessage(text: string) {
+  if (navigator.share) {
+    try {
+      await navigator.share({ text });
+    } catch {
+      // Admin closed the share sheet — nothing to do.
+    }
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    alert('ההודעה הועתקה — אפשר להדביק אותה בכל אפליקציה.');
+  } catch {
+    alert('לא ניתן לשתף או להעתיק מהדפדפן הזה.');
+  }
 }
 
 function Row({ label, value }: { label: string; value: string }) {
