@@ -301,14 +301,18 @@ export default function UserDetailPage() {
         >
           {user.role === 'admin' ? 'הסר הרשאת מנהל' : 'הפוך למנהל'}
         </button>
-        <a
-          href={buildWhatsAppShareUrl(user, phone, justResetPassword)}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          onClick={() => openWhatsAppChat('business', phone, buildAccessMessage(user, justResetPassword))}
           className="rounded-full bg-[#1D9E75] px-4 py-2 text-sm font-bold text-white"
         >
-          שתף בווצאפ
-        </a>
+          ווצאפ ביזנס
+        </button>
+        <button
+          onClick={() => openWhatsAppChat('regular', phone, buildAccessMessage(user, justResetPassword))}
+          className="rounded-full border border-[#1D9E75] px-4 py-2 text-sm font-bold text-[#1D9E75]"
+        >
+          ווצאפ
+        </button>
       </div>
     </div>
   );
@@ -317,12 +321,11 @@ export default function UserDetailPage() {
 const APP_SHARE_LINK = 'https://halimudhayomi.co.il';
 
 /**
- * wa.me link that opens WhatsApp on the user's chat with a ready-made
- * message (app link + login email). The password is only included right
- * after an admin reset on this page — it's never retrievable otherwise.
- * With no phone on file, WhatsApp opens and lets the admin pick a contact.
+ * Ready-made access message (app link + login email). The password is only
+ * included right after an admin reset on this page — it's never
+ * retrievable otherwise.
  */
-function buildWhatsAppShareUrl(user: UserProfile, phone: string, justResetPassword: string | null) {
+function buildAccessMessage(user: UserProfile, justResetPassword: string | null) {
   const lines = [
     `שלום ${user.full_name},`,
     'נפתחה לך גישה לאפליקציית הלימוד היומי.',
@@ -332,12 +335,47 @@ function buildWhatsAppShareUrl(user: UserProfile, phone: string, justResetPasswo
     `אימייל להתחברות: ${user.email}`,
   ];
   if (justResetPassword) lines.push(`סיסמה: ${justResetPassword}`);
+  return lines.join('\n');
+}
 
+/**
+ * Opens a WhatsApp chat with this specific user, message pre-filled.
+ *
+ * "business" has no universal link, so it depends on the device:
+ * - Android: an intent pinned to the WhatsApp Business app (falls back to wa.me).
+ * - Desktop: WhatsApp Web — sends from whichever account is logged in there,
+ *   so the Business number should be the one connected to WhatsApp Web.
+ * - iPhone: no way to target Business specifically; wa.me opens the
+ *   WhatsApp app the phone uses.
+ * "regular" is always wa.me.
+ */
+function openWhatsAppChat(kind: 'business' | 'regular', phone: string, text: string) {
   // Israeli local numbers (05X...) → international format WhatsApp expects (9725X...).
   let digits = phone.replace(/\D/g, '');
   if (digits.startsWith('0')) digits = `972${digits.slice(1)}`;
+  if (!digits) {
+    alert('אין מספר טלפון למשתמש/ת — הוסיפו טלפון ושמרו פרטים.');
+    return;
+  }
 
-  return `https://wa.me/${digits}?text=${encodeURIComponent(lines.join('\n'))}`;
+  const encodedText = encodeURIComponent(text);
+  const waMeUrl = `https://wa.me/${digits}?text=${encodedText}`;
+  if (kind === 'regular') {
+    window.open(waMeUrl, '_blank', 'noopener');
+    return;
+  }
+
+  const ua = navigator.userAgent;
+  if (/Android/i.test(ua)) {
+    window.location.href =
+      `intent://send?phone=${digits}&text=${encodedText}` +
+      `#Intent;scheme=whatsapp;package=com.whatsapp.w4b;` +
+      `S.browser_fallback_url=${encodeURIComponent(waMeUrl)};end`;
+  } else if (/iPhone|iPad|iPod/i.test(ua)) {
+    window.location.href = waMeUrl;
+  } else {
+    window.open(`https://web.whatsapp.com/send?phone=${digits}&text=${encodedText}`, '_blank', 'noopener');
+  }
 }
 
 function Row({ label, value }: { label: string; value: string }) {
