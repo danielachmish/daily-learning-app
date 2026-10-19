@@ -17,6 +17,7 @@ import { GradientButton } from '../components/GradientButton';
 import { LogoLockup } from '../components/LogoLockup';
 import { RemoteImage } from '../components/RemoteImage';
 import { RenewalReminderBanner } from '../components/RenewalReminderBanner';
+import { TrialBanner } from '../components/TrialBanner';
 import { t } from '../i18n/strings';
 import {
   completeLesson,
@@ -57,6 +58,7 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
 
   const [dedicationsCount, setDedicationsCount] = useState(0);
   const [renewalDaysLeft, setRenewalDaysLeft] = useState<number | null>(null);
+  const [trial, setTrial] = useState<{ endDate: string; canceled: boolean } | null>(null);
 
   const rtl = isRTL(profile.language);
   const s = t(profile.language);
@@ -76,7 +78,13 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
     // Only yearly plans need this — monthly renews itself automatically via
     // Nedarim's standing order (see create-nedarim-payment's own comment).
     fetchActiveSubscription(profile.id).then(({ subscription }) => {
-      if (!isMounted || !subscription || subscription.planType !== 'yearly') return;
+      if (!isMounted || !subscription) return;
+      // Still in the free trial (not charged yet) — the trial banner shows instead.
+      if (subscription.trialEndsAt && subscription.endDate === subscription.trialEndsAt) {
+        setTrial({ endDate: subscription.endDate, canceled: !!subscription.canceledAt });
+        return;
+      }
+      if (subscription.planType !== 'yearly') return;
       const daysLeft = Math.ceil(
         (new Date(subscription.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
       );
@@ -203,6 +211,16 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
             expo-notifications' local scheduler works natively without
             this class of issue at all. */}
       </View>
+
+      {trial && (
+        <TrialBanner
+          endDate={trial.endDate}
+          canceled={trial.canceled}
+          onCanceled={() => setTrial({ ...trial, canceled: true })}
+          rtl={rtl}
+          language={profile.language}
+        />
+      )}
 
       {renewalDaysLeft !== null && (
         <RenewalReminderBanner daysLeft={renewalDaysLeft} rtl={rtl} language={profile.language} />

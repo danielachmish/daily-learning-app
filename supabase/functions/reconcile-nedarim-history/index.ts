@@ -12,7 +12,12 @@
 // that we don't already have a row for.
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 
-import { settleDedicationPaid, settlePaymentFailure, settleSubscriptionPaid } from '../_shared/nedarimSettlement.ts';
+import {
+  settleDedicationPaid,
+  settleKevaCharge,
+  settlePaymentFailure,
+  settleSubscriptionPaid,
+} from '../_shared/nedarimSettlement.ts';
 
 const HISTORY_URL = 'https://matara.pro/nedarimplus/Reports/Manage3.aspx';
 const LAST_ID_SETTING_KEY = 'nedarim_last_history_id';
@@ -97,9 +102,29 @@ Deno.serve(async (req: Request) => {
       .eq('provider_payment_id', transactionId)
       .maybeSingle();
 
+    const today = new Date().toISOString().slice(0, 10);
+
+    // An unknown transaction on a standing order we track is a recurring
+    // charge whose CallBack was lost — settle it the same way. Skipped when
+    // the id IS the Keva id: that's the standing order's own creation row.
+    if (!payment && row.KevaId && row.KevaId !== transactionId && Number(row.Amount) > 0) {
+      try {
+        await settleKevaCharge(
+          supabase as unknown as SupabaseClient,
+          row.KevaId,
+          transactionId,
+          Number(row.Amount),
+          row as unknown as Record<string, unknown>,
+          today
+        );
+      } catch (error) {
+        console.error('reconcile-nedarim-history: failed to settle Keva charge', transactionId, error);
+      }
+      continue;
+    }
+
     if (!payment || payment.status !== 'pending') continue;
 
-    const today = new Date().toISOString().slice(0, 10);
     const amount = Number(row.Amount);
 
     try {

@@ -13,6 +13,10 @@ export interface Subscription {
   provider_subscription_id: string | null;
   /** Set when an admin freezes the Nedarim Plus standing order (DisableKeva); cleared on reactivate. */
   keva_frozen_at: string | null;
+  /** Last day of the free trial; null when the subscription had none. */
+  trial_ends_at: string | null;
+  /** Set when the subscriber canceled from the app (access runs until end_date). */
+  canceled_at: string | null;
   created_at: string;
   updated_at: string;
 }

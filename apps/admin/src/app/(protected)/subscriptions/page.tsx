@@ -186,6 +186,16 @@ export default function SubscriptionsListPage() {
                     <td className="py-2 pe-4">{subscription.plan_type === 'monthly' ? 'חודשי' : 'שנתי'}</td>
                     <td className="py-2 pe-4">
                       {subscription.status}
+                      {subscription.trial_ends_at && subscription.end_date === subscription.trial_ends_at && (
+                        <span className="ms-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-500">
+                          בניסיון עד {subscription.trial_ends_at}
+                        </span>
+                      )}
+                      {subscription.canceled_at && (
+                        <span className="ms-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+                          בוטל ע״י המנוי/ה
+                        </span>
+                      )}
                       {subscription.keva_frozen_at && (
                         <span className="ms-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
                           הוראת קבע מוקפאת
@@ -232,6 +242,16 @@ export default function SubscriptionsListPage() {
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
                   <span>{subscription.status}</span>
+                  {subscription.trial_ends_at && subscription.end_date === subscription.trial_ends_at && (
+                        <span className="ms-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-500">
+                          בניסיון עד {subscription.trial_ends_at}
+                        </span>
+                      )}
+                      {subscription.canceled_at && (
+                        <span className="ms-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+                          בוטל ע״י המנוי/ה
+                        </span>
+                      )}
                   <span>תוקף עד {subscription.end_date}</span>
                   {subscription.keva_frozen_at && (
                     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-500">

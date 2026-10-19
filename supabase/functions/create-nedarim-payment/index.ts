@@ -73,6 +73,16 @@ async function getNedarimCredentials(
   return { mosad, apiValid };
 }
 
+/** dd/MM/yyyy, `days` from today in Israel time — Nedarim's StartFrom format. */
+function israelDatePlusDays(days: number): string {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date());
+  const date = new Date(`${today}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  const dd = String(date.getUTCDate()).padStart(2, '0');
+  const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
+  return `${dd}/${mm}/${date.getUTCFullYear()}`;
+}
+
 async function createNedarimTransaction(fields: Record<string, string>): Promise<CreateTransactionResult> {
   const form = new URLSearchParams(fields);
   const resp = await fetch(CREATE_TRANSACTION_URL, {
@@ -156,6 +166,9 @@ Deno.serve(async (req: Request) => {
     let tashlumim: string;
     let comment: string;
     let dedicationId: string | null = null;
+    let planType: 'monthly' | 'yearly' | null = null;
+    let trialDays: number | null = null;
+    let startFrom: string | null = null;
 
     if (body.type === 'subscription') {
       if (body.planType !== 'monthly' && body.planType !== 'yearly') {
@@ -190,6 +203,30 @@ Deno.serve(async (req: Request) => {
       }
       amount = Number(priceSetting.value);
       comment = 'מנוי לימוד יומי';
+      planType = body.planType;
+
+      // Free trial: same rule the paywall shows (free_trial_eligible —
+      // rollout mode + once per user), re-checked here with the caller's
+      // own JWT. The charge is deferred with a standing order whose first
+      // charge date (StartFrom) is after the trial — per Nedarim's docs
+      // nothing is charged before that date; setup is only a card
+      // authorization. Yearly becomes a single-charge HK (Tashlumim 1) so
+      // its one charge can be deferred too; it still doesn't auto-renew.
+      const { data: eligible } = await supabase.rpc('free_trial_eligible');
+      if (eligible === true) {
+        const { data: daysSetting } = await serviceClient
+          .from('settings')
+          .select('value')
+          .eq('key', 'free_trial_days')
+          .maybeSingle();
+        const days = Number(daysSetting?.value ?? '7');
+        if (Number.isInteger(days) && days > 0) {
+          trialDays = days;
+          startFrom = israelDatePlusDays(days);
+          paymentType = 'HK';
+          tashlumim = body.planType === 'yearly' ? '1' : '';
+        }
+      }
     } else if (body.type === 'dedication') {
       if (!body.dedicationId) {
         return jsonResponse({ error: 'Missing dedicationId' }, 400);
@@ -227,6 +264,8 @@ Deno.serve(async (req: Request) => {
         currency: 'ILS',
         status: 'pending',
         payment_provider: 'nedarim_plus',
+        plan_type: planType,
+        trial_days: trialDays,
       })
       .select('id')
       .single();
@@ -277,6 +316,12 @@ Deno.serve(async (req: Request) => {
       // Recommended by Nedarim to prevent a duplicate charge if this
       // request is retried after a network hiccup.
       AjaxId: crypto.randomUUID(),
+      // First charge date of the standing order (dd/MM/yyyy) — only sent
+      // for a free trial. Documented for the client-side FinishTransaction2
+      // flow; whether CreateTransaction honors it too is verified by the
+      // admins-only rollout test (check the Keva's NextDate) before the
+      // trial is opened to everyone.
+      ...(startFrom ? { StartFrom: startFrom } : {}),
     });
 
     if (!result.ok) {
@@ -293,6 +338,7 @@ Deno.serve(async (req: Request) => {
       iframeUrl: 'https://matara.pro/nedarimplus/iframe?language=he',
       nedarimTransactionId: result.id,
       paymentId: payment.id,
+      trialDays,
     });
   } catch (error) {
     console.error('create-nedarim-payment error:', error);

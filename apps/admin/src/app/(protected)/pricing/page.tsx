@@ -2,11 +2,16 @@
 
 import { useEffect, useState } from 'react';
 
-import { fetchPrices, savePrices, type Prices } from '../../../services/pricing';
+import { fetchPrices, savePrices, type FreeTrialMode, type Prices } from '../../../services/pricing';
 import { createClient } from '../../../services/supabase/client';
 
 export default function PricingPage() {
-  const [prices, setPrices] = useState<Prices>({ monthlyPrice: '', yearlyPrice: '' });
+  const [prices, setPrices] = useState<Prices>({
+    monthlyPrice: '',
+    yearlyPrice: '',
+    freeTrialMode: 'off',
+    freeTrialDays: '7',
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,6 +90,47 @@ export default function PricingPage() {
               disabled={saving}
               className="w-full rounded-lg border border-line bg-paper-50 px-3 py-2 text-sm text-ink-900"
             />
+          </div>
+
+          <div className="rounded-xl border border-line p-4">
+            <h2 className="mb-1 text-sm font-bold text-ink-900">תקופת ניסיון חינם</h2>
+            <p className="mb-3 text-xs text-slate-500">
+              מכניסים אשראי בהרשמה, והחיוב הראשון יורד רק בסוף התקופה. פעם אחת לכל משתמש/ת. ב״רק מנהלים״
+              רק משתמשים עם הרשאת מנהל רואים את ההצעה — לבדיקה לפני פתיחה לכולם.
+            </p>
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <label className="mb-1 block text-sm font-medium text-slate-500">מצב</label>
+                <select
+                  value={prices.freeTrialMode}
+                  onChange={(e) => {
+                    setPrices((prev) => ({ ...prev, freeTrialMode: e.target.value as FreeTrialMode }));
+                    setSaved(false);
+                  }}
+                  disabled={saving}
+                  className="w-full rounded-lg border border-line bg-paper-50 px-3 py-2 text-sm text-ink-900"
+                >
+                  <option value="off">כבוי</option>
+                  <option value="admins">רק מנהלים (בדיקה)</option>
+                  <option value="all">פעיל לכולם</option>
+                </select>
+              </div>
+              <div className="w-32">
+                <label className="mb-1 block text-sm font-medium text-slate-500">ימים</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={prices.freeTrialDays}
+                  onChange={(e) => {
+                    setPrices((prev) => ({ ...prev, freeTrialDays: e.target.value }));
+                    setSaved(false);
+                  }}
+                  disabled={saving}
+                  className="w-full rounded-lg border border-line bg-paper-50 px-3 py-2 text-sm text-ink-900"
+                />
+              </div>
+            </div>
           </div>
 
           {error && <p className="text-sm text-danger">{error}</p>}
