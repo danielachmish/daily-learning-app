@@ -66,10 +66,10 @@ export default function PaywallScreen() {
 
     if (error) {
       notify(s.paywall.checkoutErrorTitle, error, language);
-      return;
     }
-
-    notify(s.paywall.processingTitle, s.paywall.processingMessage, language);
+    // On success startCheckout has already opened the payment screen, which
+    // shows its own confirming/success states — no popup here (it used to
+    // appear over the empty card form, before anything was paid).
   }
 
   // Placed after all hooks above, never before — signOut() really does
