@@ -40,11 +40,16 @@ const iframeStyle: React.CSSProperties = { width: '100%', border: 'none' };
 export default function PaymentScreenWeb() {
   const { profile } = useAuth();
   const s = t(profile?.language ?? 'he');
-  const { paymentId, iframeUrl, nedarimTransactionId } = useLocalSearchParams<{
+  const { paymentId, iframeUrl, nedarimTransactionId, trialDays } = useLocalSearchParams<{
     paymentId: string;
     iframeUrl: string;
     nedarimTransactionId: string;
+    trialDays?: string;
   }>();
+  // Free trial: the card is only authorized now; first charge in trialDays.
+  const trialChargeDate = trialDays
+    ? new Date(Date.now() + Number(trialDays) * 86_400_000).toLocaleDateString('he-IL')
+    : null;
 
   const [phase, setPhase] = useState<Phase>('loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -168,6 +173,8 @@ export default function PaymentScreenWeb() {
             </Pressable>
           </View>
 
+          {trialChargeDate && <Text style={styles.trialText}>{s.payment.trialToday(trialChargeDate)}</Text>}
+
           <View style={styles.scrollArea}>
             {phase === 'loading' && (
               <View style={styles.centerFill}>
@@ -190,7 +197,7 @@ export default function PaymentScreenWeb() {
                   {phase === 'paying' ? (
                     <ActivityIndicator size="small" color={colors.onTeal} />
                   ) : (
-                    <Text style={styles.payButtonText}>{s.payment.payButton}</Text>
+                    <Text style={styles.payButtonText}>{trialChargeDate ? s.payment.trialButton : s.payment.payButton}</Text>
                   )}
                 </GradientButton>
               </View>
@@ -278,6 +285,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.ink700,
     textAlign: 'center',
+  },
+  trialText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.success,
+    textAlign: 'center',
+    paddingVertical: 8,
   },
   successText: {
     fontSize: 20,

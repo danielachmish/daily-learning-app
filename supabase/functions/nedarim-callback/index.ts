@@ -23,7 +23,12 @@
 // regardless of what ends up in the JSON body.
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 
-import { settleDedicationPaid, settlePaymentFailure, settleSubscriptionPaid } from '../_shared/nedarimSettlement.ts';
+import {
+  settleDedicationPaid,
+  settleKevaCharge,
+  settlePaymentFailure,
+  settleSubscriptionPaid,
+} from '../_shared/nedarimSettlement.ts';
 
 const ALLOWED_IPS = ['18.196.146.117', '18.194.219.73'];
 
@@ -90,6 +95,33 @@ Deno.serve(async (req: Request) => {
   if (paymentLookupError || !payment) {
     console.error('nedarim-callback: no payment found for paymentId:', paymentId);
     return new Response('Unknown payment', { status: 404 });
+  }
+
+  // A later charge on an existing standing order (monthly renewal, or the
+  // first charge after a free trial) calls the same CallBack URL — so the
+  // same paymentId, already settled — but carries a KevaId, which the
+  // creation callback never does (see below).
+  const recurringKevaId = stringField(body, 'KevaId');
+  if (payment.status !== 'pending' && payment.payment_type === 'subscription' && recurringKevaId) {
+    if (body.Status === 'Error') {
+      // Declines are handled by nedarim-siruv-webhook.
+      return new Response(JSON.stringify({ received: true }), { status: 200 });
+    }
+    try {
+      const matched = await settleKevaCharge(
+        supabase as unknown as SupabaseClient,
+        recurringKevaId,
+        stringField(body, 'ID') ?? stringField(body, 'TransactionId'),
+        Number(stringField(body, 'Amount') ?? payment.amount),
+        body,
+        new Date().toISOString().slice(0, 10)
+      );
+      if (!matched) console.warn('nedarim-callback: no subscription for recurring KevaId:', recurringKevaId);
+      return new Response(JSON.stringify({ received: true }), { status: 200 });
+    } catch (error) {
+      console.error('nedarim-callback: recurring charge handler error:', error);
+      return new Response('Handler failed', { status: 500 });
+    }
   }
 
   // Idempotency: if this payment was already resolved, don't double-process

@@ -26,7 +26,7 @@ interface Result<T> {
 }
 
 const SUBSCRIPTION_COLUMNS =
-  'id, user_id, plan_type, status, start_date, end_date, payment_provider, provider_customer_id, provider_subscription_id, keva_frozen_at, created_at, updated_at, profiles(full_name, email)';
+  'id, user_id, plan_type, status, start_date, end_date, payment_provider, provider_customer_id, provider_subscription_id, keva_frozen_at, trial_ends_at, canceled_at, created_at, updated_at, profiles(full_name, email)';
 
 export async function fetchSubscriptions(
   supabase: SupabaseClient,

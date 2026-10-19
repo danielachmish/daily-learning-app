@@ -11,6 +11,8 @@ interface CreatePaymentResponse {
   iframeUrl?: string;
   nedarimTransactionId?: string;
   paymentId?: string;
+  /** Set when this checkout starts a free trial (nothing charged today). */
+  trialDays?: number | null;
   error?: string;
 }
 
@@ -46,6 +48,7 @@ export async function startCheckout(body: CheckoutRequestBody): Promise<{ error:
       paymentId: data.paymentId,
       iframeUrl: data.iframeUrl,
       nedarimTransactionId: data.nedarimTransactionId,
+      ...(data.trialDays ? { trialDays: String(data.trialDays) } : {}),
     },
   });
 

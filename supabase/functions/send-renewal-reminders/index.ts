@@ -1,4 +1,5 @@
-// Reminds yearly subscribers before their subscription lapses.
+// Reminds yearly subscribers before their subscription lapses, and free-trial
+// subscribers before their first charge.
 //
 // Monthly subscribers don't need this — their plan is an ongoing Nedarim
 // Plus standing order (HK) that renews itself automatically. Yearly is
@@ -23,6 +24,8 @@ import webpush from 'npm:web-push@3';
 import { corsHeaders } from '../_shared/cors.ts';
 
 const REMINDER_DAYS_BEFORE = [14, 7, 1];
+// Free trial: one heads-up before the first charge.
+const TRIAL_REMINDER_DAYS_BEFORE = 2;
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -69,9 +72,9 @@ Deno.serve(async (req: Request) => {
     date: addDays(today, days),
   }));
 
-  const { data: dueSubscriptions, error: subscriptionsError } = await serviceClient
+  const { data: yearlySubscriptions, error: subscriptionsError } = await serviceClient
     .from('subscriptions')
-    .select('id, user_id, end_date')
+    .select('id, user_id, end_date, trial_ends_at')
     .eq('plan_type', 'yearly')
     .eq('status', 'active')
     .in(
@@ -79,16 +82,51 @@ Deno.serve(async (req: Request) => {
       targetDates.map((t) => t.date)
     );
 
-  if (subscriptionsError) {
-    console.error('send-renewal-reminders: failed to read subscriptions:', subscriptionsError);
+  // Free trials whose first charge is TRIAL_REMINDER_DAYS_BEFORE days away
+  // (end_date still equals trial_ends_at = not charged yet, not canceled).
+  const trialChargeDate = addDays(today, TRIAL_REMINDER_DAYS_BEFORE);
+  const { data: trialSubscriptions, error: trialError } = await serviceClient
+    .from('subscriptions')
+    .select('id, user_id, plan_type, end_date, trial_ends_at')
+    .eq('status', 'active')
+    .eq('trial_ends_at', trialChargeDate)
+    .eq('end_date', trialChargeDate)
+    .is('canceled_at', null);
+
+  if (subscriptionsError || trialError) {
+    console.error('send-renewal-reminders: failed to read subscriptions:', subscriptionsError ?? trialError);
     return jsonResponse({ error: 'Failed to read subscriptions' }, 500);
   }
 
-  if (!dueSubscriptions || dueSubscriptions.length === 0) {
+  const reminders: { userId: string; title: string; body: string }[] = [];
+  for (const subscription of yearlySubscriptions ?? []) {
+    // Still inside a free trial — the trial reminder below covers it.
+    if (subscription.trial_ends_at === subscription.end_date) continue;
+    const daysLeft = targetDates.find((t) => t.date === subscription.end_date)?.days;
+    reminders.push({
+      userId: subscription.user_id,
+      title: 'המנוי שלך עומד להסתיים',
+      body:
+        daysLeft === 1
+          ? 'המנוי השנתי שלך יסתיים מחר! חדש/י עכשיו כדי לא לאבד גישה.'
+          : `המנוי השנתי שלך יסתיים בעוד ${daysLeft} ימים. חדש/י עכשיו כדי לא לאבד גישה.`,
+    });
+  }
+  for (const subscription of trialSubscriptions ?? []) {
+    reminders.push({
+      userId: subscription.user_id,
+      title: 'שבוע הניסיון מסתיים בקרוב',
+      body: `בעוד ${TRIAL_REMINDER_DAYS_BEFORE} ימים יתחיל החיוב על המנוי ה${
+        subscription.plan_type === 'yearly' ? 'שנתי' : 'חודשי'
+      }. רוצה להמשיך? לא צריך לעשות כלום. לביטול — במסך הלימוד באפליקציה.`,
+    });
+  }
+
+  if (reminders.length === 0) {
     return jsonResponse({ sent: 0, failed: 0, checked: 0 });
   }
 
-  const userIds = dueSubscriptions.map((s: { user_id: string }) => s.user_id);
+  const userIds = reminders.map((r) => r.userId);
   const { data: pushSubs, error: pushSubsError } = await serviceClient
     .from('push_subscriptions')
     .select('id, user_id, endpoint, p256dh, auth')
@@ -103,15 +141,10 @@ Deno.serve(async (req: Request) => {
   let failed = 0;
   const staleIds: string[] = [];
 
-  for (const subscription of dueSubscriptions) {
-    const daysLeft = targetDates.find((t) => t.date === subscription.end_date)?.days;
-    const body =
-      daysLeft === 1
-        ? 'המנוי השנתי שלך יסתיים מחר! חדש/י עכשיו כדי לא לאבד גישה.'
-        : `המנוי השנתי שלך יסתיים בעוד ${daysLeft} ימים. חדש/י עכשיו כדי לא לאבד גישה.`;
-    const payload = JSON.stringify({ title: 'המנוי שלך עומד להסתיים', body });
+  for (const reminder of reminders) {
+    const payload = JSON.stringify({ title: reminder.title, body: reminder.body });
 
-    const subsForUser = (pushSubs ?? []).filter((p: { user_id: string }) => p.user_id === subscription.user_id);
+    const subsForUser = (pushSubs ?? []).filter((p: { user_id: string }) => p.user_id === reminder.userId);
     for (const pushSub of subsForUser) {
       try {
         await webpush.sendNotification(
@@ -135,5 +168,5 @@ Deno.serve(async (req: Request) => {
     await serviceClient.from('push_subscriptions').delete().in('id', staleIds);
   }
 
-  return jsonResponse({ checked: dueSubscriptions.length, sent, failed, staleRemoved: staleIds.length });
+  return jsonResponse({ checked: reminders.length, sent, failed, staleRemoved: staleIds.length });
 });

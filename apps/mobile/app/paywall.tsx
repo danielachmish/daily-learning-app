@@ -8,6 +8,7 @@ import { LogoLockup } from '../src/components/LogoLockup';
 import { useAuth } from '../src/hooks/useAuth';
 import { t } from '../src/i18n/strings';
 import { startCheckout } from '../src/services/payments';
+import { fetchFreeTrialOffer } from '../src/services/subscriptions';
 import { supabase } from '../src/services/supabase';
 import { colors } from '../src/theme/colors';
 import { notify } from '../src/utils/alerts';
@@ -20,6 +21,8 @@ export default function PaywallScreen() {
   const [loadingPrices, setLoadingPrices] = useState(true);
   const [priceError, setPriceError] = useState<string | null>(null);
   const [checkingOutPlan, setCheckingOutPlan] = useState<'monthly' | 'yearly' | null>(null);
+  // Free-trial length when this user would get one at checkout (null = no trial).
+  const [trialDays, setTrialDays] = useState<number | null>(null);
 
   const language = profile?.language ?? 'he';
   const rtl = isRTL(language);
@@ -48,6 +51,9 @@ export default function PaywallScreen() {
         setLoadingPrices(false);
       });
 
+    fetchFreeTrialOffer().then(({ days }) => {
+      if (isMounted) setTrialDays(days);
+    });
     return () => {
       isMounted = false;
     };
@@ -88,6 +94,11 @@ export default function PaywallScreen() {
           false in the second case. */}
       <Text style={[styles.title, rtl && styles.textRTL]}>{s.paywall.title}</Text>
       <Text style={[styles.subtitle, rtl && styles.textRTL]}>{s.paywall.subtitle}</Text>
+      {trialDays && (
+        <View style={styles.trialBadge}>
+          <Text style={styles.trialBadgeText}>{s.paywall.trialBadge(trialDays)}</Text>
+        </View>
+      )}
 
       {loadingPrices ? (
         <ActivityIndicator style={styles.loader} />
@@ -106,7 +117,11 @@ export default function PaywallScreen() {
               <>
                 <Text style={styles.planButtonTitle}>{s.paywall.monthlyPlanTitle}</Text>
                 {monthlyPrice && (
-                  <Text style={styles.planButtonPrice}>{s.paywall.monthlyPlanPrice(monthlyPrice)}</Text>
+                  <Text style={styles.planButtonPrice}>
+                    {trialDays
+                      ? s.paywall.monthlyTrialPrice(trialDays, monthlyPrice)
+                      : s.paywall.monthlyPlanPrice(monthlyPrice)}
+                  </Text>
                 )}
               </>
             )}
@@ -123,13 +138,19 @@ export default function PaywallScreen() {
               <>
                 <Text style={styles.planButtonTitle}>{s.paywall.yearlyPlanTitle}</Text>
                 {yearlyPrice && (
-                  <Text style={styles.planButtonPrice}>{s.paywall.yearlyPlanPrice(yearlyPrice)}</Text>
+                  <Text style={styles.planButtonPrice}>
+                    {trialDays
+                      ? s.paywall.yearlyTrialPrice(trialDays, yearlyPrice)
+                      : s.paywall.yearlyPlanPrice(yearlyPrice)}
+                  </Text>
                 )}
               </>
             )}
           </GradientButton>
         </View>
       )}
+
+      {trialDays && <Text style={[styles.trialNote, rtl && styles.textRTL]}>{s.paywall.trialNote}</Text>}
 
       <Pressable style={styles.signOutLink} onPress={signOut}>
         <Text style={styles.signOutText}>{s.paywall.signOut}</Text>
@@ -191,6 +212,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.onTeal,
     marginTop: 2,
+  },
+  trialBadge: {
+    backgroundColor: colors.teal100,
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    marginTop: -4,
+  },
+  trialBadgeText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: colors.ink900,
+  },
+  trialNote: {
+    fontSize: 12.5,
+    color: colors.slate500,
+    textAlign: 'center',
   },
   signOutLink: {
     marginTop: 24,

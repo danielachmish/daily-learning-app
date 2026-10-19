@@ -80,6 +80,10 @@ export interface AppStrings {
     processingTitle: string;
     processingMessage: string;
     signOut: string;
+    trialBadge: (days: number) => string;
+    monthlyTrialPrice: (days: number, price: string) => string;
+    yearlyTrialPrice: (days: number, price: string) => string;
+    trialNote: string;
   };
   dailyLesson: {
     prevDay: string;
@@ -102,6 +106,18 @@ export interface AppStrings {
     endingTomorrow: string;
     endingInDays: (daysLeft: number) => string;
     renewNow: string;
+  };
+  trialBanner: {
+    daysLeft: (days: number) => string;
+    lastDay: string;
+    firstChargeOn: (date: string) => string;
+    cancel: string;
+    canceled: (date: string) => string;
+    confirmTitle: string;
+    confirmMessage: (date: string) => string;
+    confirmYes: string;
+    confirmNo: string;
+    cancelErrorTitle: string;
   };
   myDedications: {
     title: string;
@@ -161,6 +177,8 @@ export interface AppStrings {
     success: string;
     timeoutMessage: string;
     backToHome: string;
+    trialToday: (chargeDate: string) => string;
+    trialButton: string;
   };
   paymentNativeFallback: {
     title: string;
@@ -267,6 +285,10 @@ const he: AppStrings = {
     processingMessage:
       'אם התשלום הצליח, הגישה תיפתח בעוד רגע. אפשר לחזור למסך הראשי ולנסות שוב אם התוכן עדיין חסום.',
     signOut: 'התנתק/י',
+    trialBadge: (days) => (days === 7 ? 'שבוע ראשון חינם' : `${days} ימים ראשונים חינם`),
+    monthlyTrialPrice: (days, price) => `${days} ימים חינם, אח״כ ₪${price} / חודש`,
+    yearlyTrialPrice: (days, price) => `${days} ימים חינם, אח״כ ₪${price} / שנה`,
+    trialNote: 'לא תחויב/י היום. אפשר לבטל בכל רגע במהלך תקופת הניסיון — בלי תשלום.',
   },
   dailyLesson: {
     prevDay: '‹ אתמול',
@@ -293,6 +315,18 @@ const he: AppStrings = {
     endingTomorrow: 'המנוי השנתי שלך מסתיים מחר!',
     endingInDays: (daysLeft) => `המנוי השנתי שלך מסתיים בעוד ${daysLeft} ימים.`,
     renewNow: 'חדש/י עכשיו ›',
+  },
+  trialBanner: {
+    daysLeft: (days) => `תקופת הניסיון: נותרו ${days} ימים`,
+    lastDay: 'היום היום האחרון של תקופת הניסיון',
+    firstChargeOn: (date) => `החיוב הראשון ב-${date}`,
+    cancel: 'ביטול המנוי',
+    canceled: (date) => `המנוי בוטל. הגישה פתוחה עד ${date}.`,
+    confirmTitle: 'לבטל את המנוי?',
+    confirmMessage: (date) => `הוראת הקבע תבוטל ולא יבוצע חיוב. הגישה תישאר פתוחה עד ${date}.`,
+    confirmYes: 'כן, לבטל',
+    confirmNo: 'השאר/י את המנוי',
+    cancelErrorTitle: 'הביטול לא הצליח',
   },
   myDedications: {
     title: 'ההקדשות שלי',
@@ -355,6 +389,8 @@ const he: AppStrings = {
     success: 'התשלום התקבל בהצלחה! 🎉',
     timeoutMessage: 'עדיין מעבדים את התשלום — זה יכול לקחת כמה דקות. אפשר לחזור למסך הראשי ולבדוק שוב בהמשך.',
     backToHome: 'חזרה למסך הראשי',
+    trialToday: (chargeDate) => `לתשלום היום: ₪0 · החיוב הראשון ב-${chargeDate}`,
+    trialButton: 'התחל/י את תקופת הניסיון',
   },
   paymentNativeFallback: {
     title: 'התשלום זמין כרגע בגרסת האתר',
@@ -456,6 +492,10 @@ const en: AppStrings = {
     processingMessage:
       "If the payment succeeded, access will open in a moment. You can go back to the main screen and try again if the content is still locked.",
     signOut: 'Sign out',
+    trialBadge: (days) => (days === 7 ? 'First week free' : `First ${days} days free`),
+    monthlyTrialPrice: (days, price) => `${days} days free, then ₪${price} / month`,
+    yearlyTrialPrice: (days, price) => `${days} days free, then ₪${price} / year`,
+    trialNote: "You won't be charged today. Cancel anytime during the trial — no charge.",
   },
   dailyLesson: {
     prevDay: '‹ Prev',
@@ -482,6 +522,18 @@ const en: AppStrings = {
     endingTomorrow: 'Your yearly subscription ends tomorrow!',
     endingInDays: (daysLeft) => `Your yearly subscription ends in ${daysLeft} days.`,
     renewNow: 'Renew now ›',
+  },
+  trialBanner: {
+    daysLeft: (days) => `Free trial: ${days} days left`,
+    lastDay: 'Today is the last day of your free trial',
+    firstChargeOn: (date) => `First charge on ${date}`,
+    cancel: 'Cancel subscription',
+    canceled: (date) => `Subscription canceled. Access stays open until ${date}.`,
+    confirmTitle: 'Cancel your subscription?',
+    confirmMessage: (date) => `The standing order will be canceled and you won't be charged. Access stays open until ${date}.`,
+    confirmYes: 'Yes, cancel',
+    confirmNo: 'Keep subscription',
+    cancelErrorTitle: 'Cancellation failed',
   },
   myDedications: {
     title: 'My dedications',
@@ -545,6 +597,8 @@ const en: AppStrings = {
     timeoutMessage:
       "The payment is still being processed — this can take a few minutes. You can go back to the main screen and check again later.",
     backToHome: 'Back to the main screen',
+    trialToday: (chargeDate) => `Due today: ₪0 · First charge on ${chargeDate}`,
+    trialButton: 'Start free trial',
   },
   paymentNativeFallback: {
     title: 'Payment is currently available on the website version',
