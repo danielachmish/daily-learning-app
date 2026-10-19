@@ -77,8 +77,6 @@ export interface AppStrings {
     yearlyPlanTitle: string;
     yearlyPlanPrice: (price: string) => string;
     checkoutErrorTitle: string;
-    processingTitle: string;
-    processingMessage: string;
     signOut: string;
     trialBadge: (days: number) => string;
     monthlyTrialPrice: (days: number, price: string) => string;
@@ -281,9 +279,6 @@ const he: AppStrings = {
     yearlyPlanTitle: 'מנוי שנתי',
     yearlyPlanPrice: (price) => `₪${price} / שנה`,
     checkoutErrorTitle: 'שגיאה',
-    processingTitle: 'התשלום בעיבוד',
-    processingMessage:
-      'אם התשלום הצליח, הגישה תיפתח בעוד רגע. אפשר לחזור למסך הראשי ולנסות שוב אם התוכן עדיין חסום.',
     signOut: 'התנתק/י',
     trialBadge: (days) => (days === 7 ? 'שבוע ראשון חינם' : `${days} ימים ראשונים חינם`),
     monthlyTrialPrice: (days, price) => `${days} ימים חינם, אח״כ ₪${price} / חודש`,
@@ -488,9 +483,6 @@ const en: AppStrings = {
     yearlyPlanTitle: 'Yearly subscription',
     yearlyPlanPrice: (price) => `₪${price} / year`,
     checkoutErrorTitle: 'Error',
-    processingTitle: 'Payment processing',
-    processingMessage:
-      "If the payment succeeded, access will open in a moment. You can go back to the main screen and try again if the content is still locked.",
     signOut: 'Sign out',
     trialBadge: (days) => (days === 7 ? 'First week free' : `First ${days} days free`),
     monthlyTrialPrice: (days, price) => `${days} days free, then ₪${price} / month`,
