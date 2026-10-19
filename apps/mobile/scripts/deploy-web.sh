@@ -19,17 +19,15 @@
 # outside any build output) and copied into each fresh export before
 # deploying.
 #
-# ⚠️ THIS SCRIPT MUST STAY THE ONLY THING THAT DEPLOYS daily-learning-mobile-web.
-# The Vercel project must NEVER have GitHub git integration connected
-# (Project Settings → Git → Connected Git Repository). If it ever gets
-# connected — by anyone clicking "Connect" in the Vercel dashboard, or by
-# any tool/session doing it on your behalf — every push to master will
-# trigger Vercel's OWN auto-deploy with zero build configuration
-# (framework/buildCommand/rootDirectory all unset for this project), which
-# silently produces an EMPTY deployment ("Builds: . [0ms]") and gets
-# auto-promoted to production, taking the live site down with a bare
-# Vercel 404 — this happened for real on 2026-09-23. If you ever see the
-# site 404 like that again, check for a git link first:
+# Git-triggered deploys: daily-learning-mobile-web is now meant to be
+# connected to GitHub, with its build defined in the repo-root vercel.json
+# (install, `export:web`, output dir, SPA rewrite) and the EXPO_PUBLIC_*
+# values set as Vercel environment variables. This script stays as a manual
+# fallback. ⚠️ Never connect git WITHOUT that vercel.json in place: with no
+# build configuration Vercel produces an EMPTY deployment ("Builds: .
+# [0ms]") that gets auto-promoted to production, taking the live site down
+# with a bare Vercel 404 — this happened for real on 2026-09-23. If you ever
+# see the site 404 like that again, check for a git link first:
 #   curl -s "https://api.vercel.com/v9/projects/daily-learning-mobile-web?teamId=<team id>" \
 #     -H "Authorization: Bearer $VERCEL_TOKEN" | grep -o '"link":{[^}]*}'
 # and remove it immediately if present:
