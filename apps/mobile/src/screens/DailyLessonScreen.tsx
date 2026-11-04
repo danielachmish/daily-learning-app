@@ -19,6 +19,7 @@ import { RemoteImage } from '../components/RemoteImage';
 import { RenewalReminderBanner } from '../components/RenewalReminderBanner';
 import { TrialBanner } from '../components/TrialBanner';
 import { t } from '../i18n/strings';
+import { fetchShareMessageTemplate } from '../services/appSettings';
 import {
   completeLesson,
   fetchCompletionStatus,
@@ -62,6 +63,13 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
 
   const rtl = isRTL(profile.language);
   const s = t(profile.language);
+
+  // Fetched ahead of time, not inside handleShare: on web, navigator.share
+  // only works straight from the tap, and an await before it loses that.
+  const [shareTemplate, setShareTemplate] = useState<string | null>(null);
+  useEffect(() => {
+    fetchShareMessageTemplate().then(setShareTemplate);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -147,7 +155,12 @@ export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
   }, [selectedDate, profile.gender_track, profile.language, profile.id]);
 
   async function handleShare() {
-    await Share.share({ message: s.dailyLesson.shareMessage(APP_SHARE_LINK) });
+    // The admin-edited text is Hebrew, so English users keep the built-in one.
+    const message =
+      shareTemplate && profile.language === 'he'
+        ? shareTemplate.split('{לינק}').join(APP_SHARE_LINK)
+        : s.dailyLesson.shareMessage(APP_SHARE_LINK);
+    await Share.share({ message });
   }
 
   async function handleComplete() {

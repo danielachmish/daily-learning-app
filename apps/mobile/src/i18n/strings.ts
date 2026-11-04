@@ -200,6 +200,21 @@ export interface AppStrings {
     failed: string;
     refunded: string;
   };
+  installPrompt: {
+    title: string;
+    message: string;
+    installButton: string;
+    iosTitle: string;
+    iosStep1: string;
+    iosStep2: string;
+    iosStep3: string;
+    gotIt: string;
+    inAppTitle: string;
+    inAppMessage: string;
+    copyLink: string;
+    linkCopied: string;
+    notNow: string;
+  };
   approvalStatus: {
     pending: string;
     approved: string;
@@ -409,6 +424,22 @@ const he: AppStrings = {
     failed: 'נכשל',
     refunded: 'הוחזר',
   },
+  installPrompt: {
+    title: 'התקנת האפליקציה',
+    message: 'הוסיפו את "לימוד יומי" למסך הבית ותיכנסו בלחיצה אחת, כמו כל אפליקציה',
+    installButton: 'התקנה',
+    iosTitle: 'הוספה למסך הבית',
+    iosStep1: 'לוחצים על כפתור השיתוף ⬆️ בתחתית המסך',
+    iosStep2: 'בוחרים "הוספה למסך הבית" ➕',
+    iosStep3: 'לוחצים "הוסף" בפינה העליונה',
+    gotIt: 'הבנתי',
+    inAppTitle: 'פתחו בדפדפן כדי להתקין',
+    inAppMessage:
+      'הקישור נפתח בתוך אפליקציה אחרת (כמו ווצאפ), ומשם אי אפשר להוסיף למסך הבית. לחצו על ⋯ בפינת המסך ובחרו "פתח בדפדפן", או העתיקו את הקישור והדביקו אותו בדפדפן.',
+    copyLink: 'העתקת הקישור',
+    linkCopied: 'הקישור הועתק ✓',
+    notNow: 'לא עכשיו',
+  },
   approvalStatus: {
     pending: 'ממתין לאישור',
     approved: 'מאושר',
@@ -613,6 +644,22 @@ const en: AppStrings = {
     paid: 'Paid',
     failed: 'Failed',
     refunded: 'Refunded',
+  },
+  installPrompt: {
+    title: 'Install the app',
+    message: 'Add "Daily Learning" to your home screen and open it with one tap, like any app',
+    installButton: 'Install',
+    iosTitle: 'Add to Home Screen',
+    iosStep1: 'Tap the Share button ⬆️ at the bottom of the screen',
+    iosStep2: 'Choose "Add to Home Screen" ➕',
+    iosStep3: 'Tap "Add" in the top corner',
+    gotIt: 'Got it',
+    inAppTitle: 'Open in your browser to install',
+    inAppMessage:
+      'This link opened inside another app (like WhatsApp), which cannot add it to your home screen. Tap ⋯ in the corner and choose "Open in browser", or copy the link and paste it into your browser.',
+    copyLink: 'Copy link',
+    linkCopied: 'Link copied ✓',
+    notNow: 'Not now',
   },
   approvalStatus: {
     pending: 'Pending approval',

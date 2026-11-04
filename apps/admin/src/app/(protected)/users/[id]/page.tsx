@@ -12,6 +12,12 @@ import {
   setRole,
   updateUserDetails,
 } from '../../../../services/users';
+import {
+  APP_SHARE_LINK,
+  DEFAULT_TEMPLATES,
+  fetchMessageTemplates,
+  renderTemplate,
+} from '../../../../services/messageTemplates';
 import { createClient } from '../../../../services/supabase/client';
 
 export default function UserDetailPage() {
@@ -31,6 +37,9 @@ export default function UserDetailPage() {
   const [newPassword, setNewPassword] = useState('');
   const [resettingPassword, setResettingPassword] = useState(false);
   const [justResetPassword, setJustResetPassword] = useState<string | null>(null);
+  // Loaded up front (not on click) — the WhatsApp buttons must open their
+  // window synchronously, or mobile browsers block it as a popup.
+  const [accessTemplate, setAccessTemplate] = useState(DEFAULT_TEMPLATES.accessMessage);
 
   useEffect(() => {
     async function load() {
@@ -49,6 +58,12 @@ export default function UserDetailPage() {
     }
     load();
   }, [id]);
+
+  useEffect(() => {
+    fetchMessageTemplates(createClient()).then((result) => {
+      if (result.data) setAccessTemplate(result.data.accessMessage);
+    });
+  }, []);
 
   async function handleSaveDetails() {
     const trimmedName = fullName.trim();
@@ -302,13 +317,13 @@ export default function UserDetailPage() {
           {user.role === 'admin' ? 'הסר הרשאת מנהל' : 'הפוך למנהל'}
         </button>
         <button
-          onClick={() => openWhatsAppChat('business', phone, buildAccessMessage(user, justResetPassword))}
+          onClick={() => openWhatsAppChat('business', phone, buildAccessMessage(accessTemplate, user, justResetPassword))}
           className="rounded-full bg-[#1D9E75] px-4 py-2 text-sm font-bold text-white"
         >
           ווצאפ ביזנס
         </button>
         <button
-          onClick={() => openWhatsAppChat('regular', phone, buildAccessMessage(user, justResetPassword))}
+          onClick={() => openWhatsAppChat('regular', phone, buildAccessMessage(accessTemplate, user, justResetPassword))}
           className="rounded-full border border-[#1D9E75] px-4 py-2 text-sm font-bold text-[#1D9E75]"
         >
           ווצאפ
@@ -318,24 +333,18 @@ export default function UserDetailPage() {
   );
 }
 
-const APP_SHARE_LINK = 'https://halimudhayomi.co.il';
-
 /**
- * Ready-made access message (app link + login email). The password is only
- * included right after an admin reset on this page — it's never
- * retrievable otherwise.
+ * The access message, from the template editable in admin settings. The
+ * password is only included right after an admin reset on this page — it's
+ * never retrievable otherwise — and its line is dropped when absent.
  */
-function buildAccessMessage(user: UserProfile, justResetPassword: string | null) {
-  const lines = [
-    `שלום ${user.full_name},`,
-    'נפתחה לך גישה לאפליקציית הלימוד היומי.',
-    '',
-    `להורדת האפליקציה: ${APP_SHARE_LINK}`,
-    '',
-    `אימייל להתחברות: ${user.email}`,
-  ];
-  if (justResetPassword) lines.push(`סיסמה: ${justResetPassword}`);
-  return lines.join('\n');
+function buildAccessMessage(template: string, user: UserProfile, justResetPassword: string | null) {
+  return renderTemplate(template, {
+    name: user.full_name,
+    link: APP_SHARE_LINK,
+    email: user.email,
+    password: justResetPassword,
+  });
 }
 
 /**
