@@ -27,7 +27,7 @@ let html = fs.readFileSync(indexPath, 'utf8');
 html = html.replace('<html lang="en">', '<html lang="he" dir="rtl">');
 
 const headAdditions = `
-  <meta name="theme-color" content="#128499" />
+  <meta name="theme-color" content="#122048" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />

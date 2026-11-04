@@ -4,6 +4,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppAlertHost } from '../src/components/AppAlertHost';
+import { InstallPrompt } from '../src/components/InstallPrompt';
 import { AuthProvider, useAuth } from '../src/hooks/useAuth';
 import { colors } from '../src/theme/colors';
 import { syncAppDirection } from '../src/utils/appDirection';
@@ -91,6 +92,8 @@ export default function RootLayout() {
               work from any screen or service, on-brand instead of the
               browser's/OS's own generic alert chrome. */}
           <AppAlertHost />
+          {/* Web only: "add to home screen" sheet, once logged in. */}
+          <InstallPrompt />
         </DirectionSync>
       </AuthProvider>
     </SafeAreaProvider>
