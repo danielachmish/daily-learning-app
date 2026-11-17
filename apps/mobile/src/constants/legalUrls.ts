@@ -3,7 +3,7 @@
 // an account. Content itself is edited by the org in the admin panel's
 // "מסמכים משפטיים" screen, not hardcoded here. Shared by register.tsx and
 // about.tsx so both link to the same place.
-const ADMIN_BASE_URL = 'https://admin.halimudhayomi.co.il';
+const ADMIN_BASE_URL = 'https://admin.limudyomi.co.il';
 
 export const PRIVACY_POLICY_URL = `${ADMIN_BASE_URL}/legal/privacy`;
 export const TERMS_URL = `${ADMIN_BASE_URL}/legal/terms`;

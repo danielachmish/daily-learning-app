@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { logActivity } from './activityLog';
 
-export const APP_SHARE_LINK = 'https://halimudhayomi.co.il';
+export const APP_SHARE_LINK = 'https://app.limudyomi.co.il';
 
 export interface MessageTemplates {
   /** WhatsApp message sent from a user's admin page when granting access. */
