@@ -39,7 +39,7 @@ interface Props {
   initialDate?: string;
 }
 
-const APP_SHARE_LINK = 'https://halimudhayomi.co.il';
+const APP_SHARE_LINK = 'https://app.limudyomi.co.il';
 
 export function DailyLessonScreen({ profile, onSignOut, initialDate }: Props) {
   const router = useRouter();
