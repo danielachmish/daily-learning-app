@@ -4,6 +4,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppAlertHost } from '../src/components/AppAlertHost';
+import { DomainMovedNotice } from '../src/components/DomainMovedNotice';
 import { InstallPrompt } from '../src/components/InstallPrompt';
 import { AuthProvider, useAuth } from '../src/hooks/useAuth';
 import { colors } from '../src/theme/colors';
@@ -94,6 +95,8 @@ export default function RootLayout() {
           <AppAlertHost />
           {/* Web only: "add to home screen" sheet, once logged in. */}
           <InstallPrompt />
+          {/* Web only: full-screen "we moved" notice on the old domain. */}
+          <DomainMovedNotice />
         </DirectionSync>
       </AuthProvider>
     </SafeAreaProvider>
