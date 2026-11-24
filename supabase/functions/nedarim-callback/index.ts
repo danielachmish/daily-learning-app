@@ -29,6 +29,7 @@ import {
   settlePaymentFailure,
   settleSubscriptionPaid,
 } from '../_shared/nedarimSettlement.ts';
+import { logServerEvent } from '../_shared/eventLog.ts';
 
 const ALLOWED_IPS = ['18.196.146.117', '18.194.219.73'];
 
@@ -54,7 +55,7 @@ Deno.serve(async (req: Request) => {
 
   const clientIp = getClientIp(req);
   if (!clientIp || !ALLOWED_IPS.includes(clientIp)) {
-    console.error('nedarim-callback: rejected request from unrecognized IP:', clientIp);
+    await logServerEvent('warning', 'nedarim-callback', 'rejected request from unrecognized IP', clientIp);
     return new Response('Forbidden', { status: 403 });
   }
 
@@ -63,13 +64,13 @@ Deno.serve(async (req: Request) => {
   try {
     body = JSON.parse(rawBody);
   } catch {
-    console.error('nedarim-callback: non-JSON body:', rawBody);
+    await logServerEvent('error', 'nedarim-callback', 'non-JSON body', rawBody);
     return new Response('Invalid JSON', { status: 400 });
   }
 
   const paymentId = new URL(req.url).searchParams.get('paymentId');
   if (!paymentId) {
-    console.error('nedarim-callback: missing paymentId query param, cannot match to a pending payment:', rawBody);
+    await logServerEvent('error', 'nedarim-callback', 'missing paymentId query param, cannot match to a pending payment', rawBody);
     return new Response('Missing paymentId', { status: 400 });
   }
 
@@ -79,7 +80,7 @@ Deno.serve(async (req: Request) => {
   // the two, but worth knowing about).
   const param2 = stringField(body, 'Param2');
   if (param2 && param2 !== paymentId) {
-    console.error('nedarim-callback: Param2/paymentId mismatch', { paymentId, param2 });
+    await logServerEvent('error', 'nedarim-callback', 'Param2/paymentId mismatch', { paymentId, param2 });
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -93,7 +94,7 @@ Deno.serve(async (req: Request) => {
     .single();
 
   if (paymentLookupError || !payment) {
-    console.error('nedarim-callback: no payment found for paymentId:', paymentId);
+    await logServerEvent('error', 'nedarim-callback', 'no payment found for paymentId', paymentId);
     return new Response('Unknown payment', { status: 404 });
   }
 
@@ -119,7 +120,7 @@ Deno.serve(async (req: Request) => {
       if (!matched) console.warn('nedarim-callback: no subscription for recurring KevaId:', recurringKevaId);
       return new Response(JSON.stringify({ received: true }), { status: 200 });
     } catch (error) {
-      console.error('nedarim-callback: recurring charge handler error:', error);
+      await logServerEvent('error', 'nedarim-callback', 'recurring charge handler error', error);
       return new Response('Handler failed', { status: 500 });
     }
   }
@@ -135,7 +136,7 @@ Deno.serve(async (req: Request) => {
   // alone were ever replayed against a different amount.
   const reportedAmount = stringField(body, 'Amount');
   if (reportedAmount && Math.abs(Number(reportedAmount) - Number(payment.amount)) > 0.01) {
-    console.error('nedarim-callback: amount mismatch', { paymentId, expected: payment.amount, reportedAmount });
+    await logServerEvent('error', 'nedarim-callback', 'amount mismatch', { paymentId, expected: payment.amount, reportedAmount });
     await supabase
       .from('payments')
       .update({ status: 'failed', raw_event: body, updated_at: new Date().toISOString() })
@@ -168,7 +169,7 @@ Deno.serve(async (req: Request) => {
 
     return new Response(JSON.stringify({ received: true }), { status: 200 });
   } catch (error) {
-    console.error('nedarim-callback: handler error:', error);
+    await logServerEvent('error', 'nedarim-callback', 'handler error', error);
     return new Response('Handler failed', { status: 500 });
   }
 });

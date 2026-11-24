@@ -11,6 +11,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 import { corsHeaders } from '../_shared/cors.ts';
+import { logServerEvent } from '../_shared/eventLog.ts';
 
 const MANAGE_URL = 'https://matara.pro/nedarimplus/Reports/Manage3.aspx';
 
@@ -94,7 +95,7 @@ Deno.serve(async (req: Request) => {
 
   // DeleteKeva answers the literal text "OK" on success.
   if (responseText !== 'OK') {
-    console.error('cancel-my-subscription: DeleteKeva failed', { subscriptionId: subscription.id, responseText });
+    await logServerEvent('error', 'cancel-my-subscription', 'DeleteKeva failed', { subscriptionId: subscription.id, responseText });
     return jsonResponse({ error: 'הביטול נכשל. נסו שוב או פנו אלינו.' }, 502);
   }
 

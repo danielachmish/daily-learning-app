@@ -16,6 +16,7 @@
 // Same IP-verification approach as nedarim-callback — no signature exists
 // on either webhook, per the docs' own security notes.
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { logServerEvent } from '../_shared/eventLog.ts';
 
 const ALLOWED_IPS = ['18.196.146.117', '18.194.219.73'];
 
@@ -41,7 +42,7 @@ Deno.serve(async (req: Request) => {
 
   const clientIp = getClientIp(req);
   if (!clientIp || !ALLOWED_IPS.includes(clientIp)) {
-    console.error('nedarim-siruv-webhook: rejected request from unrecognized IP:', clientIp);
+    await logServerEvent('warning', 'nedarim-siruv-webhook', 'rejected request from unrecognized IP', clientIp);
     return new Response('Forbidden', { status: 403 });
   }
 
@@ -50,7 +51,7 @@ Deno.serve(async (req: Request) => {
   try {
     body = JSON.parse(rawBody);
   } catch {
-    console.error('nedarim-siruv-webhook: non-JSON body:', rawBody);
+    await logServerEvent('error', 'nedarim-siruv-webhook', 'non-JSON body', rawBody);
     return new Response('Invalid JSON', { status: 400 });
   }
 
@@ -79,7 +80,7 @@ Deno.serve(async (req: Request) => {
     .maybeSingle();
 
   if (lookupError) {
-    console.error('nedarim-siruv-webhook: lookup failed:', lookupError);
+    await logServerEvent('error', 'nedarim-siruv-webhook', 'lookup failed', lookupError);
     return new Response('Lookup failed', { status: 500 });
   }
 

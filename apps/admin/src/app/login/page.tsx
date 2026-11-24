@@ -28,6 +28,14 @@ export default function AdminLoginPage() {
     setSubmitting(false);
 
     if (signInError) {
+      void supabase.rpc('log_app_event', {
+        p_level: signInError.code === 'invalid_credentials' ? 'warning' : 'error',
+        p_event: 'admin.login_failed',
+        p_message: signInError.message,
+        p_context: { code: signInError.code ?? null, status: signInError.status ?? null, userAgent: navigator.userAgent },
+        p_email: email,
+        p_source: 'admin',
+      });
       setError(signInError.message);
       return;
     }

@@ -17,6 +17,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3';
 
 import { corsHeaders } from '../_shared/cors.ts';
+import { logServerEvent } from '../_shared/eventLog.ts';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -80,7 +81,7 @@ Deno.serve(async (req: Request) => {
     .eq('reminder_time', nowTime);
 
   if (settingsError) {
-    console.error('send-reminder-pushes: failed to read notification_settings:', settingsError);
+    await logServerEvent('error', 'send-reminder-pushes', 'failed to read notification_settings', settingsError);
     return jsonResponse({ error: 'Failed to read notification settings' }, 500);
   }
 
@@ -95,7 +96,7 @@ Deno.serve(async (req: Request) => {
     .in('user_id', dueUserIds);
 
   if (subscriptionsError) {
-    console.error('send-reminder-pushes: failed to read push_subscriptions:', subscriptionsError);
+    await logServerEvent('error', 'send-reminder-pushes', 'failed to read push_subscriptions', subscriptionsError);
     return jsonResponse({ error: 'Failed to read push subscriptions' }, 500);
   }
 
@@ -123,7 +124,7 @@ Deno.serve(async (req: Request) => {
       if (statusCode === 404 || statusCode === 410) {
         staleIds.push(sub.id);
       } else {
-        console.error('send-reminder-pushes: push failed for subscription', sub.id, err);
+        await logServerEvent('error', 'send-reminder-pushes', 'push failed for subscription', [sub.id, err]);
       }
     }
   }

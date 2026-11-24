@@ -22,6 +22,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3';
 
 import { corsHeaders } from '../_shared/cors.ts';
+import { logServerEvent } from '../_shared/eventLog.ts';
 
 const REMINDER_DAYS_BEFORE = [14, 7, 1];
 // Free trial: one heads-up before the first charge.
@@ -94,7 +95,7 @@ Deno.serve(async (req: Request) => {
     .is('canceled_at', null);
 
   if (subscriptionsError || trialError) {
-    console.error('send-renewal-reminders: failed to read subscriptions:', subscriptionsError ?? trialError);
+    await logServerEvent('error', 'send-renewal-reminders', 'failed to read subscriptions', subscriptionsError ?? trialError);
     return jsonResponse({ error: 'Failed to read subscriptions' }, 500);
   }
 
@@ -133,7 +134,7 @@ Deno.serve(async (req: Request) => {
     .in('user_id', userIds);
 
   if (pushSubsError) {
-    console.error('send-renewal-reminders: failed to read push_subscriptions:', pushSubsError);
+    await logServerEvent('error', 'send-renewal-reminders', 'failed to read push_subscriptions', pushSubsError);
     return jsonResponse({ error: 'Failed to read push subscriptions' }, 500);
   }
 
@@ -158,7 +159,7 @@ Deno.serve(async (req: Request) => {
         if (statusCode === 404 || statusCode === 410) {
           staleIds.push(pushSub.id);
         } else {
-          console.error('send-renewal-reminders: push failed for subscription', pushSub.id, err);
+          await logServerEvent('error', 'send-renewal-reminders', 'push failed for subscription', [pushSub.id, err]);
         }
       }
     }

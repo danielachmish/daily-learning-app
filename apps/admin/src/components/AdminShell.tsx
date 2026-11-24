@@ -18,7 +18,7 @@ const NAV_LINKS = [
   { href: '/settings', label: 'הגדרות' },
   { href: '/legal', label: 'מסמכים משפטיים' },
   { href: '/reports', label: 'דוחות' },
-  { href: '/logs', label: 'יומן פעולות' },
+  { href: '/logs', label: 'יומן מערכת ותקלות' },
 ];
 
 interface Props {

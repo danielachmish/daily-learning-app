@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { GradientButton } from '../src/components/GradientButton';
 import { useAuth } from '../src/hooks/useAuth';
 import { t } from '../src/i18n/strings';
+import { logEvent } from '../src/services/eventLog';
 import { supabase } from '../src/services/supabase';
 import { colors } from '../src/theme/colors';
 
@@ -87,12 +88,20 @@ export default function PaymentScreenWeb() {
 
       if (data?.status === 'paid') {
         clearPolling();
+        logEvent('info', 'payment.paid', { context: { paymentId } });
         setPhase('success');
       } else if (data?.status === 'failed') {
         clearPolling();
+        logEvent('error', 'payment.failed', { context: { paymentId } });
         setPhase('failed');
       } else if (pollCountRef.current >= MAX_POLLS) {
         clearPolling();
+        // Card accepted by Nedarim but our callback never marked the
+        // payment paid — the classic "I paid but it doesn't show" case.
+        logEvent('error', 'payment.confirm_timeout', {
+          message: 'Nedarim returned OK but the payment row never became paid',
+          context: { paymentId, nedarimTransactionId, lastStatus: data?.status ?? null, polls: pollCountRef.current },
+        });
         setPhase('timeout');
       }
     }, POLL_INTERVAL_MS);
@@ -120,6 +129,10 @@ export default function PaymentScreenWeb() {
       } else if (name === 'TransactionResponse') {
         const result = event.data.Value ?? {};
         if (result.Status === 'Error') {
+          logEvent('warning', 'payment.card_rejected', {
+            message: typeof result.Message === 'string' ? result.Message : null,
+            context: { paymentId, nedarimTransactionId },
+          });
           setErrorMessage(result.Message ?? s.payment.paymentNotCompleted);
           setPhase('ready'); // unlock the button so the donor can fix the card and retry
         } else if (result.Status === 'OK') {

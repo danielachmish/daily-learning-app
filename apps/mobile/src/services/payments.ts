@@ -1,6 +1,7 @@
 import type { PlanType } from '@daily-learning/shared';
 import { router } from 'expo-router';
 
+import { describeError, logEvent } from './eventLog';
 import { supabase } from './supabase';
 
 type CheckoutRequestBody =
@@ -36,11 +37,24 @@ export async function startCheckout(body: CheckoutRequestBody): Promise<{ error:
   });
 
   if (error) {
+    const response = (error as { context?: Response }).context;
+    const responseBody = await response?.json?.().catch(() => null);
+    logEvent('error', 'payment.checkout_failed', {
+      message: responseBody?.error ?? error.message,
+      context: { request: body, status: response?.status ?? null, error: describeError(error) },
+    });
     return { error: error.message };
   }
   if (!data?.iframeUrl || !data?.nedarimTransactionId || !data?.paymentId) {
+    logEvent('error', 'payment.checkout_failed', {
+      message: data?.error ?? 'Missing iframeUrl/nedarimTransactionId/paymentId in response',
+      context: { request: body, response: data ?? null },
+    });
     return { error: data?.error ?? 'לא ניתן היה להתחיל את התשלום.' };
   }
+  logEvent('info', 'payment.checkout_started', {
+    context: { request: body, paymentId: data.paymentId, trialDays: data.trialDays ?? null },
+  });
 
   router.push({
     pathname: '/payment',

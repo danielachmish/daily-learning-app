@@ -21,6 +21,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 import { corsHeaders } from '../_shared/cors.ts';
+import { logServerEvent } from '../_shared/eventLog.ts';
 
 const CREATE_TRANSACTION_URL =
   'https://matara.pro/nedarimplus/V6/Files/WebServices/DebitIframe.aspx?Action=CreateTransaction';
@@ -341,7 +342,7 @@ Deno.serve(async (req: Request) => {
       trialDays,
     });
   } catch (error) {
-    console.error('create-nedarim-payment error:', error);
+    await logServerEvent('error', 'create-nedarim-payment', 'unhandled error', error);
     return jsonResponse({ error: 'Failed to create payment' }, 500);
   }
 });

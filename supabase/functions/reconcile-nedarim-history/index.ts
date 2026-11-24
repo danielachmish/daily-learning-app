@@ -18,6 +18,7 @@ import {
   settlePaymentFailure,
   settleSubscriptionPaid,
 } from '../_shared/nedarimSettlement.ts';
+import { logServerEvent } from '../_shared/eventLog.ts';
 
 const HISTORY_URL = 'https://matara.pro/nedarimplus/Reports/Manage3.aspx';
 const LAST_ID_SETTING_KEY = 'nedarim_last_history_id';
@@ -81,7 +82,7 @@ Deno.serve(async (req: Request) => {
     history = await historyResp.json();
   } catch {
     const text = await historyResp.text().catch(() => '');
-    console.error('reconcile-nedarim-history: unexpected response from GetHistoryJson:', text);
+    await logServerEvent('error', 'reconcile-nedarim-history', 'unexpected response from GetHistoryJson', text);
     return jsonResponse({ error: 'Unexpected response from Nedarim Plus' }, 502);
   }
 
@@ -118,7 +119,7 @@ Deno.serve(async (req: Request) => {
           today
         );
       } catch (error) {
-        console.error('reconcile-nedarim-history: failed to settle Keva charge', transactionId, error);
+        await logServerEvent('error', 'reconcile-nedarim-history', 'failed to settle Keva charge', [transactionId, error]);
       }
       continue;
     }
@@ -150,7 +151,7 @@ Deno.serve(async (req: Request) => {
         transactionId,
       });
     } catch (error) {
-      console.error('reconcile-nedarim-history: failed to settle payment', payment.id, error);
+      await logServerEvent('error', 'reconcile-nedarim-history', 'failed to settle payment', [payment.id, error]);
     }
   }
 

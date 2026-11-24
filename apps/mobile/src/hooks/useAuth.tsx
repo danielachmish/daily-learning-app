@@ -2,6 +2,7 @@ import type { GenderTrack, Language, UserProfile } from '@daily-learning/shared'
 import type { Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
+import { describeError, logEvent } from '../services/eventLog';
 import { supabase } from '../services/supabase';
 
 export interface SignUpInput {
@@ -33,6 +34,10 @@ interface AuthContextValue {
   updateTrack: (genderTrack: GenderTrack) => Promise<AuthResult>;
 }
 
+/** Set just before a deliberate sign-out, so the auth listener can tell it
+    apart from a session that was dropped on its own. */
+let userInitiatedSignOut = false;
+
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 async function fetchProfile(userId: string): Promise<UserProfile | null> {
@@ -45,6 +50,12 @@ async function fetchProfile(userId: string): Promise<UserProfile | null> {
     .single();
 
   if (error) {
+    // A logged-in user with no loadable profile gets stuck at the gate
+    // screens — one of the main "I can't get in" causes, so always log it.
+    logEvent('error', 'auth.profile_load_failed', {
+      message: error.message,
+      context: { userId, code: error.code, details: error.details, hint: error.hint },
+    });
     return null;
   }
 
@@ -60,8 +71,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let isMounted = true;
 
     async function loadInitialSession() {
-      const { data } = await supabase.auth.getSession();
+      const { data, error: sessionError } = await supabase.auth.getSession();
       if (!isMounted) return;
+      if (sessionError) {
+        logEvent('error', 'auth.session_restore_failed', {
+          message: sessionError.message,
+          context: { error: describeError(sessionError) },
+        });
+      }
 
       setSession(data.session);
       if (data.session) {
@@ -73,7 +90,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     loadInitialSession();
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, newSession) => {
+      // A session that disappears without the user pressing "sign out"
+      // (expired/invalid refresh token) looks to them like "it logged me out".
+      if (event === 'SIGNED_OUT' && !userInitiatedSignOut) {
+        logEvent('warning', 'auth.signed_out_unexpectedly');
+      }
+      userInitiatedSignOut = false;
       setSession(newSession);
       if (newSession) {
         fetchProfile(newSession.user.id).then((loadedProfile) => {
@@ -92,6 +115,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signIn(email: string, password: string): Promise<AuthResult> {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      // Wrong password is routine (warning); anything else — network,
+      // unconfirmed email, server error — is a real problem (error).
+      const isBadCredentials = error.code === 'invalid_credentials';
+      logEvent(isBadCredentials ? 'warning' : 'error', 'auth.login_failed', {
+        message: error.message,
+        email,
+        context: { code: error.code ?? null, status: error.status ?? null },
+      });
+    } else {
+      logEvent('info', 'auth.login_success', { email });
+    }
     return { error: error?.message ?? null };
   }
 
@@ -102,10 +137,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
+      logEvent(error.code === 'user_already_exists' ? 'warning' : 'error', 'auth.register_failed', {
+        message: error.message,
+        email: input.email,
+        context: { step: 'auth.signUp', code: error.code ?? null, status: error.status ?? null },
+      });
       return { error: error.message };
     }
 
     if (!data.user) {
+      logEvent('error', 'auth.register_failed', {
+        message: 'Sign up did not return a user.',
+        email: input.email,
+        context: { step: 'auth.signUp' },
+      });
       return { error: 'Sign up did not return a user.' };
     }
 
@@ -119,16 +164,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (profileError) {
+      logEvent('error', 'auth.register_failed', {
+        message: profileError.message,
+        email: input.email,
+        context: {
+          step: 'profiles.insert',
+          userId: data.user.id,
+          hasSession: Boolean(data.session),
+          code: profileError.code,
+          details: profileError.details,
+          hint: profileError.hint,
+        },
+      });
       return { error: profileError.message };
     }
 
     const loadedProfile = await fetchProfile(data.user.id);
     setProfile(loadedProfile);
+    logEvent('info', 'auth.register_success', { email: input.email });
 
     return { error: null };
   }
 
   async function signOut(): Promise<void> {
+    userInitiatedSignOut = true;
+    logEvent('info', 'auth.logout');
     await supabase.auth.signOut();
   }
 
@@ -143,6 +203,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .eq('id', profile.id);
 
     if (error) {
+      logEvent('error', 'profile.update_track_failed', {
+        message: error.message,
+        context: { genderTrack, code: error.code },
+      });
       return { error: error.message };
     }
 

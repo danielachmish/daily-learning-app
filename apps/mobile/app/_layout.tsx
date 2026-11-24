@@ -1,4 +1,10 @@
-import { router, Stack } from 'expo-router';
+import {
+  ErrorBoundary as DefaultErrorBoundary,
+  router,
+  Stack,
+  usePathname,
+  type ErrorBoundaryProps,
+} from 'expo-router';
 import { useEffect, type ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -7,6 +13,12 @@ import { AppAlertHost } from '../src/components/AppAlertHost';
 import { DomainMovedNotice } from '../src/components/DomainMovedNotice';
 import { InstallPrompt } from '../src/components/InstallPrompt';
 import { AuthProvider, useAuth } from '../src/hooks/useAuth';
+import {
+  describeError,
+  installGlobalErrorHandlers,
+  logEvent,
+  setCurrentScreen,
+} from '../src/services/eventLog';
 import { colors } from '../src/theme/colors';
 import { syncAppDirection } from '../src/utils/appDirection';
 import { isDeviceRTL, isRTL } from '../src/utils/rtl';
@@ -28,11 +40,41 @@ function DirectionSync({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+// Installed at module load (not in an effect) so a crash during the very
+// first render is still caught and logged.
+installGlobalErrorHandlers();
+
+/** Records the current route so every logged event says which screen the
+    user was on when it happened. */
+function ScreenTracker() {
+  const pathname = usePathname();
+  useEffect(() => {
+    setCurrentScreen(pathname);
+  }, [pathname]);
+  return null;
+}
+
+/**
+ * expo-router renders this instead of a screen that threw while rendering.
+ * Logs the crash (so it shows up in the admin "יומן מערכת" with the stack)
+ * and then shows expo-router's own error screen with its "retry" button.
+ */
+export function ErrorBoundary(props: ErrorBoundaryProps) {
+  useEffect(() => {
+    logEvent('error', 'app.render_crash', {
+      message: props.error.message,
+      context: { error: describeError(props.error) },
+    });
+  }, [props.error]);
+  return <DefaultErrorBoundary {...props} />;
+}
+
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
         <DirectionSync>
+          <ScreenTracker />
           {/* On web, every screen was built full-bleed with no width cap —
               fine on a phone, but on a wide desktop browser the content
               just hugs one side with a huge empty gap on the other. This

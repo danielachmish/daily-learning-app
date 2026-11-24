@@ -1,3 +1,4 @@
+import { describeError, logEvent } from './eventLog';
 import { supabase } from './supabase';
 
 export interface ActiveSubscriptionSummary {
@@ -62,7 +63,16 @@ export async function cancelMySubscription(): Promise<{ error: string | null }> 
     // The function's own Hebrew message, when it returned one.
     const context = (error as { context?: Response }).context;
     const body = await context?.json?.().catch(() => null);
+    logEvent('error', 'subscription.cancel_failed', {
+      message: body?.error ?? error.message,
+      context: { status: context?.status ?? null, error: describeError(error) },
+    });
     return { error: body?.error ?? error.message };
   }
-  return { error: data?.canceled ? null : (data?.error ?? 'הביטול נכשל.') };
+  if (!data?.canceled) {
+    logEvent('error', 'subscription.cancel_failed', { message: data?.error ?? 'הביטול נכשל.' });
+    return { error: data?.error ?? 'הביטול נכשל.' };
+  }
+  logEvent('info', 'subscription.canceled_by_user');
+  return { error: null };
 }
